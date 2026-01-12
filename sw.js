@@ -4,19 +4,19 @@ const STATIC_CACHE_NAME = 'recipe-tracker-static-v1';
 
 // Files to cache for offline functionality
 const STATIC_FILES = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/manifest.json',
-  '/js/app.js',
-  '/js/data-models.js',
-  '/js/barcode-scanner.js',
-  '/js/portion-calculator.js',
-  '/js/product-database.js',
-  '/js/recipe-manager.js',
-  '/js/storage-manager.js',
-  '/js/ui-controller.js',
-  '/icon.svg'
+  './',
+  './index.html',
+  './styles.css',
+  './manifest.json',
+  './js/app.js',
+  './js/data-models.js',
+  './js/barcode-scanner.js',
+  './js/portion-calculator.js',
+  './js/product-database.js',
+  './js/recipe-manager.js',
+  './js/storage-manager.js',
+  './js/ui-controller.js',
+  './icon.svg'
 ];
 
 // Install event - cache static files

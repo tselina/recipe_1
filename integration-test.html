@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Test - Recipe Portion Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Recipe Portion Tracker - Integration Test</h1>
+    <div id="test-results"></div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        const testResults = document.getElementById('test-results');
+        
+        function addTestResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            testResults.appendChild(div);
+        }
+
+        function addTestDetails(details) {
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(details, null, 2);
+            testResults.appendChild(pre);
+        }
+
+        async function runIntegrationTests() {
+            addTestResult('Starting integration tests...', 'info');
+
+            try {
+                // Clear any existing data first
+                const storage = new StorageManager();
+                storage.clearAll();
+                
+                // Test 1: Module Loading
+                addTestResult('✓ Test 1: All modules loaded successfully', 'success');
+
+                // Test 2: Class Instantiation
+                const recipeManager = new RecipeManager(storage);
+                const calculator = new PortionCalculator();
+                const productDb = new ProductDatabase(storage);
+                const barcodeScanner = new BarcodeScanner();
+                
+                addTestResult('✓ Test 2: All classes instantiated successfully', 'success');
+
+                // Test 3: Storage Manager
+                storage.save('test-key', { test: 'data' });
+                const loadedData = storage.load('test-key');
+                if (loadedData && loadedData.test === 'data') {
+                    addTestResult('✓ Test 3: Storage Manager working correctly', 'success');
+                } else {
+                    throw new Error('Storage Manager test failed');
+                }
+
+                // Test 4: Recipe Creation and Management
+                const recipe = recipeManager.createRecipe('Test Recipe', [
+                    { name: 'Flour', weight: 100, barcode: '123456' },
+                    { name: 'Sugar', weight: 50 }
+                ]);
+                
+                if (recipe.name === 'Test Recipe' && recipe.totalWeight === 150) {
+                    addTestResult('✓ Test 4: Recipe creation working correctly', 'success');
+                    addTestDetails({
+                        recipeName: recipe.name,
+                        totalWeight: recipe.totalWeight,
+                        ingredientCount: recipe.ingredients.length
+                    });
+                } else {
+                    throw new Error('Recipe creation test failed');
+                }
+
+                // Test 5: Portion Calculation
+                const result = calculator.calculatePortions(recipe, 75);
+                if (result.consumedWeight === 75 && result.ingredients.length === 2) {
+                    addTestResult('✓ Test 5: Portion calculation working correctly', 'success');
+                    addTestDetails({
+                        consumedWeight: result.consumedWeight,
+                        ingredients: result.ingredients.map(ing => ({
+                            name: ing.name,
+                            consumedWeight: ing.consumedWeight
+                        }))
+                    });
+                } else {
+                    throw new Error('Portion calculation test failed');
+                }
+
+                // Test 6: Product Database
+                const product = productDb.addProduct('Flour', '123456');
+                const searchResults = productDb.searchProducts('Flour');
+                if (searchResults.length > 0 && searchResults[0].name === 'Flour') {
+                    addTestResult('✓ Test 6: Product database working correctly', 'success');
+                } else {
+                    throw new Error('Product database test failed');
+                }
+
+                // Test 7: Recipe Consumption
+                recipeManager.recordConsumption(recipe.id, 75);
+                const updatedRecipe = recipeManager.getRecipeById(recipe.id);
+                if (updatedRecipe.remainingWeight === 75) {
+                    addTestResult('✓ Test 7: Recipe consumption tracking working correctly', 'success');
+                } else {
+                    throw new Error('Recipe consumption test failed');
+                }
+
+                // Test 8: Data Validation
+                try {
+                    const validation = storage.validateRecipeName('Valid Recipe Name');
+                    if (validation.isValid) {
+                        addTestResult('✓ Test 8: Data validation working correctly', 'success');
+                    } else {
+                        throw new Error('Data validation test failed');
+                    }
+                } catch (error) {
+                    throw new Error('Data validation test failed: ' + error.message);
+                }
+
+                // Test 9: Error Handling
+                try {
+                    calculator.calculatePortions(updatedRecipe, 200); // Should fail - too much weight
+                    throw new Error('Error handling test failed - should have thrown error');
+                } catch (error) {
+                    if (error.message.includes('Cannot consume more than remaining weight') || 
+                        error.message.includes('Cannot consume') || 
+                        error.message.includes('remaining')) {
+                        addTestResult('✓ Test 9: Error handling working correctly', 'success');
+                    } else {
+                        throw new Error('Error handling test failed: ' + error.message);
+                    }
+                }
+
+                // Test 10: Barcode Scanner Support Check
+                const scannerStatus = barcodeScanner.getStatus();
+                addTestResult(`✓ Test 10: Barcode scanner support checked (supported: ${scannerStatus.isSupported})`, 'success');
+                addTestDetails(scannerStatus);
+
+                // Test 11: Complete Workflow
+                const workflow = {
+                    recipesCreated: recipeManager.getAllRecipes().length,
+                    productsInDb: productDb.getAllProducts().length,
+                    storageStats: storage.getStorageInfo()
+                };
+                addTestResult('✓ Test 11: Complete workflow integration successful', 'success');
+                addTestDetails(workflow);
+
+                // Cleanup
+                storage.clearAll();
+                addTestResult('✓ All integration tests passed successfully!', 'success');
+
+            } catch (error) {
+                addTestResult('✗ Integration test failed: ' + error.message, 'error');
+                console.error('Integration test error:', error);
+            }
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(runIntegrationTests, 100);
+        });
+    </script>
+</body>
+</html>

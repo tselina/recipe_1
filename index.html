@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track food consumption by calculating ingredient portions from prepared dishes">
+    <meta name="theme-color" content="#2196F3">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Recipe Tracker">
+    
+    <title>Recipe Portion Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Recipe Portion Tracker</h1>
+        <nav class="main-nav">
+            <button id="nav-recipes" class="nav-btn active">Recipes</button>
+            <button id="nav-create" class="nav-btn">Create Recipe</button>
+            <button id="nav-calculate" class="nav-btn">Calculate Portions</button>
+        </nav>
+    </header>
+
+    <main class="app-main">
+        <!-- Recipe List View -->
+        <section id="recipe-list-view" class="view active">
+            <div class="recipe-list-header">
+                <h2>Your Recipes</h2>
+                <div class="recipe-controls">
+                    <div class="search-container">
+                        <input type="text" id="recipe-search" placeholder="Search recipes..." class="search-input">
+                        <button type="button" id="clear-search" class="clear-search-btn hidden">&times;</button>
+                    </div>
+                    <div class="filter-container">
+                        <select id="recipe-filter" class="filter-select">
+                            <option value="all">All Recipes</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="recipe-list" class="recipe-grid">
+                <!-- Recipes will be dynamically inserted here -->
+            </div>
+            <div id="empty-state" class="empty-state">
+                <p>No recipes yet. Create your first recipe to get started!</p>
+                <button id="create-first-recipe" class="btn btn-primary">Create Recipe</button>
+            </div>
+            <div id="no-results-state" class="empty-state hidden">
+                <p>No recipes match your search criteria.</p>
+                <button id="clear-filters" class="btn btn-secondary">Clear Filters</button>
+            </div>
+        </section>
+
+        <!-- Recipe Creation View -->
+        <section id="recipe-create-view" class="view">
+            <h2>Create New Recipe</h2>
+            <form id="recipe-form" class="recipe-form">
+                <div class="form-group">
+                    <label for="recipe-name">Recipe Name</label>
+                    <input type="text" id="recipe-name" name="recipeName" required>
+                    <div class="error-message" id="recipe-name-error"></div>
+                </div>
+                
+                <div class="ingredients-section">
+                    <h3>Ingredients</h3>
+                    <div id="ingredients-list" class="ingredients-list">
+                        <!-- Ingredient inputs will be added here -->
+                    </div>
+                    <button type="button" id="add-ingredient" class="btn btn-secondary">Add Ingredient</button>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="cancel-recipe" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Recipe</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Portion Calculator View -->
+        <section id="portion-calculator-view" class="view">
+            <h2>Calculate Portions</h2>
+            <div class="calculator-section">
+                <div class="form-group">
+                    <label for="recipe-select">Select Recipe</label>
+                    <select id="recipe-select" name="recipeSelect">
+                        <option value="">Choose a recipe...</option>
+                    </select>
+                </div>
+                
+                <div id="recipe-info" class="recipe-info hidden">
+                    <h3 id="selected-recipe-name"></h3>
+                    <p>Total Weight: <span id="total-weight"></span>g</p>
+                    <p>Remaining Weight: <span id="remaining-weight"></span>g</p>
+                </div>
+                
+                <div class="consumption-input">
+                    <div class="form-group">
+                        <label for="consumed-weight">Weight Consumed (grams)</label>
+                        <input type="number" id="consumed-weight" name="consumedWeight" min="0" step="0.1">
+                        <div class="error-message" id="consumed-weight-error"></div>
+                    </div>
+                    <button type="button" id="consume-all" class="btn btn-secondary">Consume All</button>
+                    <button type="button" id="calculate-portions" class="btn btn-primary">Calculate</button>
+                </div>
+                
+                <div id="calculation-results" class="results-section hidden">
+                    <h3>Consumption Results</h3>
+                    <div id="results-list" class="results-list">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <div id="offline-indicator" class="offline-indicator hidden">
+            <span>Offline Mode</span>
+        </div>
+    </footer>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator hidden">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="error-toast" class="toast error-toast hidden">
+        <span id="error-message"></span>
+        <button id="close-error" class="close-btn">&times;</button>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="success-toast" class="toast success-toast hidden">
+        <span id="success-message"></span>
+        <button id="close-success" class="close-btn">&times;</button>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

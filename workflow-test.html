@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Workflow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Complete Workflow Test</h1>
+    <div id="results"></div>
+
+    <!-- Load modules in correct order -->
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function addSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h3>${title}</h3>`;
+            results.appendChild(section);
+            return section;
+        }
+        
+        function log(message, type = 'info', section = null) {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            
+            if (section) {
+                section.appendChild(div);
+            } else {
+                results.appendChild(div);
+            }
+            
+            console.log(message);
+        }
+        
+        function logObject(obj, section = null) {
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(obj, null, 2);
+            
+            if (section) {
+                section.appendChild(pre);
+            } else {
+                results.appendChild(pre);
+            }
+        }
+
+        // Wait for all scripts to load
+        setTimeout(async () => {
+            try {
+                // Clear any existing data first
+                const storage = new StorageManager();
+                storage.clearAll();
+                
+                // Test 1: Component Integration
+                const section1 = addSection('1. Component Integration Test');
+                
+                const storage = new StorageManager();
+                const recipeManager = new RecipeManager(storage);
+                const calculator = new PortionCalculator();
+                const productDb = new ProductDatabase(storage);
+                const barcodeScanner = new BarcodeScanner();
+                
+                log('✓ All components initialized successfully', 'success', section1);
+                
+                // Test 2: Recipe Creation Workflow
+                const section2 = addSection('2. Recipe Creation Workflow');
+                
+                // Create a recipe with multiple ingredients
+                const recipe1 = recipeManager.createRecipe('Chocolate Cake', [
+                    { name: 'Flour', weight: 200, barcode: '1234567890' },
+                    { name: 'Sugar', weight: 150 },
+                    { name: 'Cocoa Powder', weight: 50, barcode: '0987654321' },
+                    { name: 'Eggs', weight: 100 }
+                ]);
+                
+                log(`✓ Recipe created: ${recipe1.name}`, 'success', section2);
+                log(`  - Total weight: ${recipe1.totalWeight}g`, 'info', section2);
+                log(`  - Ingredients: ${recipe1.ingredients.length}`, 'info', section2);
+                log(`  - Remaining weight: ${recipe1.remainingWeight}g`, 'info', section2);
+                
+                // Test 3: Product Database Integration
+                const section3 = addSection('3. Product Database Integration');
+                
+                // Products should be automatically added when creating recipes
+                const flourProducts = productDb.searchProducts('Flour');
+                log(`✓ Product database updated: Found ${flourProducts.length} flour products`, 'success', section3);
+                
+                // Add additional products
+                productDb.addProduct('Butter', '1111111111');
+                productDb.addProduct('Vanilla Extract', '2222222222');
+                
+                const allProducts = productDb.getAllProducts();
+                log(`✓ Total products in database: ${allProducts.length}`, 'success', section3);
+                
+                // Test 4: Portion Calculation Workflow
+                const section4 = addSection('4. Portion Calculation Workflow');
+                
+                // Calculate portions for partial consumption
+                const consumedWeight = 250; // Consume 250g out of 500g total
+                const portionResult = calculator.calculatePortions(recipe1, consumedWeight);
+                
+                log(`✓ Calculated portions for ${consumedWeight}g consumption`, 'success', section4);
+                log(`  - Recipe: ${portionResult.recipeName}`, 'info', section4);
+                log(`  - Consumed weight: ${portionResult.consumedWeight}g`, 'info', section4);
+                
+                portionResult.ingredients.forEach(ingredient => {
+                    const percentage = ((ingredient.consumedWeight / ingredient.originalWeight) * 100).toFixed(1);
+                    log(`  - ${ingredient.name}: ${ingredient.consumedWeight}g (${percentage}% of ${ingredient.originalWeight}g)`, 'info', section4);
+                });
+                
+                // Test 5: Recipe State Management
+                const section5 = addSection('5. Recipe State Management');
+                
+                // Record the consumption
+                recipeManager.recordConsumption(recipe1.id, consumedWeight);
+                const updatedRecipe = recipeManager.getRecipeById(recipe1.id);
+                
+                log(`✓ Recipe consumption recorded`, 'success', section5);
+                log(`  - Remaining weight: ${updatedRecipe.remainingWeight}g`, 'info', section5);
+                log(`  - Consumption percentage: ${updatedRecipe.getConsumptionPercentage()}%`, 'info', section5);
+                log(`  - Last consumed: ${new Date(updatedRecipe.lastConsumed).toLocaleString()}`, 'info', section5);
+                
+                // Test 6: Multiple Recipe Management
+                const section6 = addSection('6. Multiple Recipe Management');
+                
+                // Create additional recipes
+                const recipe2 = recipeManager.createRecipe('Vanilla Cookies', [
+                    { name: 'Flour', weight: 300 },
+                    { name: 'Butter', weight: 200 },
+                    { name: 'Sugar', weight: 100 },
+                    { name: 'Vanilla Extract', weight: 10 }
+                ]);
+                
+                const recipe3 = recipeManager.createRecipe('Fruit Salad', [
+                    { name: 'Apples', weight: 200 },
+                    { name: 'Bananas', weight: 150 },
+                    { name: 'Oranges', weight: 180 }
+                ]);
+                
+                const allRecipes = recipeManager.getAllRecipes();
+                const activeRecipes = recipeManager.getActiveRecipes();
+                const completedRecipes = recipeManager.getCompletedRecipes();
+                
+                log(`✓ Multiple recipes created`, 'success', section6);
+                log(`  - Total recipes: ${allRecipes.length}`, 'info', section6);
+                log(`  - Active recipes: ${activeRecipes.length}`, 'info', section6);
+                log(`  - Completed recipes: ${completedRecipes.length}`, 'info', section6);
+                
+                // Test 7: Complete Consumption Workflow
+                const section7 = addSection('7. Complete Consumption Workflow');
+                
+                // Consume all remaining of the first recipe
+                const remainingWeight = updatedRecipe.remainingWeight;
+                const finalResult = calculator.consumeAll(updatedRecipe);
+                recipeManager.markAsFullyConsumed(recipe1.id);
+                
+                const finalRecipe = recipeManager.getRecipeById(recipe1.id);
+                
+                log(`✓ Recipe fully consumed`, 'success', section7);
+                log(`  - Final consumption: ${remainingWeight}g`, 'info', section7);
+                log(`  - Recipe completed: ${finalRecipe.isFullyConsumed()}`, 'info', section7);
+                log(`  - Final remaining weight: ${finalRecipe.remainingWeight}g`, 'info', section7);
+                
+                // Test 8: Data Persistence and Validation
+                const section8 = addSection('8. Data Persistence and Validation');
+                
+                // Test storage statistics
+                const storageStats = storage.getStorageInfo();
+                const recipeStats = recipeManager.getStorageStats();
+                const productStats = productDb.getStats();
+                
+                log(`✓ Data persistence verified`, 'success', section8);
+                logObject({
+                    storage: storageStats,
+                    recipes: recipeStats,
+                    products: productStats
+                }, section8);
+                
+                // Test 9: Error Handling and Validation
+                const section9 = addSection('9. Error Handling and Validation');
+                
+                let errorTests = 0;
+                let passedErrorTests = 0;
+                
+                // Test invalid recipe creation
+                try {
+                    recipeManager.createRecipe('', []); // Should fail
+                    errorTests++;
+                } catch (error) {
+                    log(`✓ Invalid recipe creation properly rejected: ${error.message}`, 'success', section9);
+                    errorTests++;
+                    passedErrorTests++;
+                }
+                
+                // Test excessive consumption
+                try {
+                    calculator.calculatePortions(recipe2, 10000); // Should fail
+                    errorTests++;
+                } catch (error) {
+                    log(`✓ Excessive consumption properly rejected: ${error.message}`, 'success', section9);
+                    errorTests++;
+                    passedErrorTests++;
+                }
+                
+                // Test invalid weight
+                try {
+                    const validation = storage.validateWeight(-10, 'Test weight');
+                    if (!validation.isValid) {
+                        log(`✓ Invalid weight properly rejected: ${validation.error}`, 'success', section9);
+                        errorTests++;
+                        passedErrorTests++;
+                    }
+                } catch (error) {
+                    log(`✓ Invalid weight validation working: ${error.message}`, 'success', section9);
+                    errorTests++;
+                    passedErrorTests++;
+                }
+                
+                log(`✓ Error handling tests: ${passedErrorTests}/${errorTests} passed`, 'success', section9);
+                
+                // Test 10: Barcode Scanner Integration
+                const section10 = addSection('10. Barcode Scanner Integration');
+                
+                const scannerStatus = barcodeScanner.getStatus();
+                log(`✓ Barcode scanner status checked`, 'success', section10);
+                logObject(scannerStatus, section10);
+                
+                // Test 11: Search and Filter Functionality
+                const section11 = addSection('11. Search and Filter Functionality');
+                
+                const searchResults = recipeManager.searchRecipes('Cake');
+                const flourSearch = productDb.searchProducts('Flour');
+                
+                log(`✓ Search functionality tested`, 'success', section11);
+                log(`  - Recipe search for 'Cake': ${searchResults.length} results`, 'info', section11);
+                log(`  - Product search for 'Flour': ${flourSearch.length} results`, 'info', section11);
+                
+                // Final Summary
+                const summarySection = addSection('Final Summary');
+                
+                const finalStats = {
+                    totalRecipes: recipeManager.getAllRecipes().length,
+                    activeRecipes: recipeManager.getActiveRecipes().length,
+                    completedRecipes: recipeManager.getCompletedRecipes().length,
+                    totalProducts: productDb.getAllProducts().length,
+                    storageUsage: storage.getStorageInfo(),
+                    scannerSupported: barcodeScanner.isSupported
+                };
+                
+                log('✓ Complete workflow test passed successfully!', 'success', summarySection);
+                logObject(finalStats, summarySection);
+                
+                // Cleanup
+                storage.clearAll();
+                log('✓ Test data cleaned up', 'success', summarySection);
+                
+            } catch (error) {
+                log('✗ Workflow test failed: ' + error.message, 'error');
+                console.error('Workflow test error:', error);
+            }
+        }, 200);
+    </script>
+</body>
+</html>

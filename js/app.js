@@ -680,7 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'PortionCalculator',
             'ProductDatabase',
             'UIController',
-            'BarcodeScanner'
+            'BarcodeScanner',
+            'BarcodeGenerator'
         ];
         
         // Check which classes are available

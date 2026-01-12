@@ -11,6 +11,7 @@ const STATIC_FILES = [
   './js/app.js',
   './js/data-models.js',
   './js/barcode-scanner.js',
+  './js/barcode-generator.js',
   './js/portion-calculator.js',
   './js/product-database.js',
   './js/recipe-manager.js',

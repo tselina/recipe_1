@@ -322,26 +322,60 @@ body {
 
 .ingredient-item {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.ingredient-row-1 {
+    display: flex;
+    gap: 0.5rem;
     align-items: flex-start;
+}
+
+.ingredient-row-2 {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .ingredient-name-container {
     position: relative;
-    flex: 2;
-}
-
-.ingredient-item input {
     flex: 1;
+    min-width: 0;
 }
 
-.ingredient-item input[type="number"] {
+.ingredient-weight-container {
     flex: 0 0 100px;
 }
 
-.ingredient-barcode {
-    flex: 0 0 120px;
+.ingredient-barcode-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.ingredient-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.ingredient-item input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.ingredient-item input:focus {
+    outline: none;
+    border-color: #2196F3;
 }
 
 .remove-ingredient {
@@ -349,10 +383,15 @@ body {
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 0.75rem;
+    padding: 0.5rem 1rem;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.remove-ingredient:hover {
+    background-color: #d32f2f;
 }
 
 /* Autocomplete Suggestions */
@@ -714,11 +753,28 @@ body {
         margin-bottom: 0;
     }
     
-    .ingredient-item input[type="number"] {
+    .ingredient-item {
+        flex-direction: row;
+        align-items: flex-start;
+        padding: 1rem;
+    }
+    
+    .ingredient-row-1 {
+        flex: 1;
+        margin-right: 1rem;
+    }
+    
+    .ingredient-row-2 {
+        flex: 0 0 auto;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .ingredient-weight-container {
         flex: 0 0 120px;
     }
     
-    .ingredient-barcode {
+    .ingredient-barcode-container {
         flex: 0 0 140px;
     }
     
@@ -953,6 +1009,138 @@ body {
     right: -3px;
     border-left: none;
     border-top: none;
+}
+
+/* Barcode Generation and Display */
+.barcode-display {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.barcode-display h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.barcode-image {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: white;
+}
+
+.barcode-text {
+    font-family: monospace;
+    font-size: 1rem;
+    color: #333;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    word-break: break-all;
+}
+
+.barcode-button {
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    transition: background-color 0.2s;
+    min-width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.barcode-button:hover {
+    background-color: #45a049;
+}
+
+.barcode-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Recipe Details Expansion */
+.recipe-details-toggle {
+    background: none;
+    border: none;
+    color: #2196F3;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    padding: 0;
+    margin-top: 0.5rem;
+}
+
+.recipe-details-toggle:hover {
+    color: #1976D2;
+}
+
+.recipe-ingredients-expanded {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #2196F3;
+}
+
+.recipe-ingredients-expanded h4 {
+    margin: 0 0 1rem 0;
+    color: #2196F3;
+    font-size: 1rem;
+}
+
+.ingredient-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ingredient-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.ingredient-list li:last-child {
+    border-bottom: none;
+}
+
+.ingredient-name {
+    font-weight: 500;
+    color: #333;
+    flex: 1;
+}
+
+.ingredient-weight {
+    color: #666;
+    font-size: 0.9rem;
+    margin-left: 1rem;
+}
+
+.ingredient-barcode-info {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #888;
+    background: #e9ecef;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
 }
 
 /* Scan button styles */

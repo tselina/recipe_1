@@ -16,6 +16,9 @@ class UIController {
         this.barcodeScanner = new BarcodeScanner();
         this.currentScanningInput = null;
         
+        // Initialize barcode generator
+        this.barcodeGenerator = new BarcodeGenerator();
+        
         this.init();
     }
 
@@ -399,6 +402,9 @@ class UIController {
                 </div>
                 <p class="recipe-ingredients">
                     <strong>Ingredients:</strong> ${recipe.ingredients.length} items
+                    <button type="button" class="recipe-details-toggle" onclick="window.recipeTrackerApp.uiController.toggleRecipeIngredients('${recipe.id}', this)">
+                        Show ingredients
+                    </button>
                 </p>
                 <p class="recipe-weight">
                     <strong>Created:</strong> ${createdDate}
@@ -749,31 +755,44 @@ class UIController {
         ingredientDiv.dataset.index = ingredientIndex;
         
         ingredientDiv.innerHTML = `
-            <div class="ingredient-name-container">
-                <input type="text" 
-                       class="ingredient-name" 
-                       placeholder="Ingredient name" 
-                       data-index="${ingredientIndex}"
-                       required>
-                <div class="autocomplete-suggestions" id="suggestions-${ingredientIndex}"></div>
+            <div class="ingredient-row-1">
+                <div class="ingredient-name-container">
+                    <input type="text" 
+                           class="ingredient-name" 
+                           placeholder="Ingredient name" 
+                           data-index="${ingredientIndex}"
+                           required>
+                    <div class="autocomplete-suggestions" id="suggestions-${ingredientIndex}"></div>
+                </div>
+                <div class="ingredient-weight-container">
+                    <input type="number" 
+                           class="ingredient-weight" 
+                           placeholder="Weight (g)" 
+                           min="0.1" 
+                           step="0.1" 
+                           data-index="${ingredientIndex}"
+                           required>
+                </div>
             </div>
-            <input type="number" 
-                   class="ingredient-weight" 
-                   placeholder="Weight (g)" 
-                   min="0.1" 
-                   step="0.1" 
-                   data-index="${ingredientIndex}"
-                   required>
-            <input type="text" 
-                   class="ingredient-barcode" 
-                   placeholder="Barcode (optional)" 
-                   data-index="${ingredientIndex}">
-            <button type="button" class="scan-barcode" data-index="${ingredientIndex}" title="Scan Barcode">
-                📷
-            </button>
-            <button type="button" class="remove-ingredient" data-index="${ingredientIndex}">
-                Remove
-            </button>
+            <div class="ingredient-row-2">
+                <div class="ingredient-barcode-container">
+                    <input type="text" 
+                           class="ingredient-barcode" 
+                           placeholder="Barcode (optional)" 
+                           data-index="${ingredientIndex}">
+                </div>
+                <div class="ingredient-actions">
+                    <button type="button" class="scan-barcode" data-index="${ingredientIndex}" title="Scan Barcode">
+                        📷
+                    </button>
+                    <button type="button" class="barcode-button" data-index="${ingredientIndex}" title="Generate Barcode" style="display: none;">
+                        📊
+                    </button>
+                    <button type="button" class="remove-ingredient" data-index="${ingredientIndex}">
+                        Remove
+                    </button>
+                </div>
+            </div>
         `;
         
         ingredientsList.appendChild(ingredientDiv);
@@ -799,9 +818,25 @@ class UIController {
             scanBtn.style.display = 'none';
         }
         
+        // Set up barcode generation button
+        const barcodeBtn = ingredientDiv.querySelector('.barcode-button');
+        const barcodeInput = ingredientDiv.querySelector('.ingredient-barcode');
+        
+        // Show/hide barcode generation button based on input
+        barcodeInput.addEventListener('input', () => {
+            if (barcodeInput.value.trim()) {
+                barcodeBtn.style.display = 'inline-flex';
+            } else {
+                barcodeBtn.style.display = 'none';
+            }
+        });
+        
+        barcodeBtn.addEventListener('click', () => {
+            this.showBarcodeModal(barcodeInput.value.trim());
+        });
+        
         // Set up validation
         const weightInput = ingredientDiv.querySelector('.ingredient-weight');
-        const barcodeInput = ingredientDiv.querySelector('.ingredient-barcode');
         
         weightInput.addEventListener('input', () => {
             this.validateIngredientWeight(weightInput);
@@ -1489,7 +1524,10 @@ class UIController {
                             ${ingredient.consumedWeight.toFixed(1)}g of ${ingredient.originalWeight}g (${consumedPercentage}%)
                         </span>
                         ${ingredient.barcode ? `
-                            <span class="barcode">Barcode: ${this.storageManager.escapeHtml(ingredient.barcode)}</span>
+                            <span class="barcode">
+                                Barcode: ${this.storageManager.escapeHtml(ingredient.barcode)}
+                                <button type="button" class="barcode-button" onclick="window.recipeTrackerApp.uiController.showBarcodeModal('${ingredient.barcode}')" title="Show Barcode">📊</button>
+                            </span>
                         ` : ''}
                     </div>
                 </div>
@@ -1672,6 +1710,152 @@ class UIController {
         });
 
         return modal;
+    }
+
+    /**
+     * Show barcode generation modal
+     * @param {string} barcodeText - Text to generate barcode for
+     */
+    showBarcodeModal(barcodeText) {
+        if (!barcodeText || !this.barcodeGenerator.isValidBarcodeText(barcodeText)) {
+            this.showErrorMessage('Invalid barcode text. Supported characters: ' + this.barcodeGenerator.getSupportedCharacters());
+            return;
+        }
+
+        try {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('barcode-display-modal');
+            if (!modal) {
+                modal = this.createBarcodeDisplayModal();
+                document.body.appendChild(modal);
+            }
+
+            // Generate barcode
+            const barcodeDataURL = this.barcodeGenerator.generateBarcodeDataURL(barcodeText, {
+                width: 300,
+                height: 100,
+                showText: true
+            });
+
+            // Update modal content
+            const barcodeImage = modal.querySelector('#barcode-image');
+            const barcodeTextEl = modal.querySelector('#barcode-text');
+            
+            barcodeImage.src = barcodeDataURL;
+            barcodeTextEl.textContent = barcodeText;
+
+            // Show modal
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+
+        } catch (error) {
+            console.error('Failed to generate barcode:', error);
+            this.showErrorMessage('Failed to generate barcode: ' + error.message);
+        }
+    }
+
+    /**
+     * Create barcode display modal
+     * @returns {HTMLElement} Modal element
+     */
+    createBarcodeDisplayModal() {
+        const modal = document.createElement('div');
+        modal.id = 'barcode-display-modal';
+        modal.className = 'modal hidden';
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" id="barcode-display-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Generated Barcode</h3>
+                    <button type="button" class="modal-close" id="close-barcode-display">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="barcode-display">
+                        <img id="barcode-image" class="barcode-image" alt="Generated Barcode">
+                        <div class="barcode-text" id="barcode-text"></div>
+                        <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
+                            This barcode can be scanned by barcode scanner apps
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="close-barcode-display-btn">Close</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const closeBtn = modal.querySelector('#close-barcode-display');
+        const closeBtnFooter = modal.querySelector('#close-barcode-display-btn');
+        const overlay = modal.querySelector('#barcode-display-overlay');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        closeBtnFooter.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+
+        // Prevent modal from closing when clicking inside content
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        return modal;
+    }
+
+    /**
+     * Toggle recipe ingredients display
+     * @param {string} recipeId - Recipe ID
+     * @param {HTMLElement} toggleButton - Toggle button element
+     */
+    toggleRecipeIngredients(recipeId, toggleButton) {
+        try {
+            const recipe = this.recipeManager.getRecipeById(recipeId);
+            if (!recipe) {
+                this.showErrorMessage('Recipe not found');
+                return;
+            }
+
+            const recipeCard = toggleButton.closest('.recipe-card');
+            let ingredientsDiv = recipeCard.querySelector('.recipe-ingredients-expanded');
+
+            if (ingredientsDiv) {
+                // Hide ingredients
+                ingredientsDiv.remove();
+                toggleButton.textContent = 'Show ingredients';
+            } else {
+                // Show ingredients
+                ingredientsDiv = document.createElement('div');
+                ingredientsDiv.className = 'recipe-ingredients-expanded';
+                
+                ingredientsDiv.innerHTML = `
+                    <h4>Ingredients (${recipe.ingredients.length} items)</h4>
+                    <ul class="ingredient-list">
+                        ${recipe.ingredients.map(ingredient => `
+                            <li>
+                                <span class="ingredient-name">${this.storageManager.escapeHtml(ingredient.name)}</span>
+                                <span class="ingredient-weight">${ingredient.weight}g</span>
+                                ${ingredient.barcode ? `<span class="ingredient-barcode-info">${this.storageManager.escapeHtml(ingredient.barcode)}</span>` : ''}
+                                ${ingredient.barcode ? `<button type="button" class="barcode-button" onclick="window.recipeTrackerApp.uiController.showBarcodeModal('${ingredient.barcode}')" title="Show Barcode">📊</button>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+
+                // Insert after recipe details
+                const recipeDetails = recipeCard.querySelector('.recipe-details');
+                recipeDetails.appendChild(ingredientsDiv);
+                toggleButton.textContent = 'Hide ingredients';
+            }
+
+        } catch (error) {
+            console.error('Failed to toggle recipe ingredients:', error);
+            this.showErrorMessage('Failed to load recipe ingredients');
+        }
     }
 
     /**

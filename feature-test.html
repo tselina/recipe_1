@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Features Test - Recipe Portion Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+        .test-section h3 {
+            color: #2196F3;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+        <h1>New Features Test</h1>
+        
+        <div class="test-section">
+            <h3>1. Responsive Ingredient Form</h3>
+            <p>Test the responsive ingredient input layout on mobile devices:</p>
+            <div class="ingredients-section">
+                <div id="test-ingredients-list" class="ingredients-list">
+                    <!-- Ingredients will be added here -->
+                </div>
+                <button type="button" id="add-test-ingredient" class="btn btn-secondary">Add Test Ingredient</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Barcode Generation</h3>
+            <p>Test barcode generation functionality:</p>
+            <div style="display: flex; gap: 1rem; align-items: center; margin: 1rem 0;">
+                <input type="text" id="barcode-test-input" placeholder="Enter barcode text (e.g., 123456789)" style="flex: 1;">
+                <button type="button" id="generate-barcode-btn" class="btn btn-primary">Generate Barcode</button>
+            </div>
+            <div id="barcode-result" style="margin-top: 1rem;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Recipe Ingredients Expansion</h3>
+            <p>Test recipe card with expandable ingredients:</p>
+            <div id="test-recipe-card" class="recipe-card">
+                <div class="recipe-header">
+                    <h3 class="recipe-name">Test Recipe</h3>
+                    <div class="recipe-status active">Active</div>
+                </div>
+                <div class="recipe-details">
+                    <p class="recipe-weight">
+                        <strong>Weight:</strong> 500g / 500g remaining
+                    </p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <p class="recipe-ingredients">
+                        <strong>Ingredients:</strong> 3 items
+                        <button type="button" class="recipe-details-toggle" id="test-toggle-btn">
+                            Show ingredients
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/barcode-generator.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize components
+            const storage = new StorageManager();
+            const recipeManager = new RecipeManager(storage);
+            const calculator = new PortionCalculator();
+            const productDb = new ProductDatabase(storage);
+            const barcodeGenerator = new BarcodeGenerator();
+            
+            // Test 1: Responsive Ingredient Form
+            let ingredientIndex = 0;
+            document.getElementById('add-test-ingredient').addEventListener('click', () => {
+                const ingredientsList = document.getElementById('test-ingredients-list');
+                
+                const ingredientDiv = document.createElement('div');
+                ingredientDiv.className = 'ingredient-item';
+                ingredientDiv.dataset.index = ingredientIndex;
+                
+                ingredientDiv.innerHTML = `
+                    <div class="ingredient-row-1">
+                        <div class="ingredient-name-container">
+                            <input type="text" 
+                                   class="ingredient-name" 
+                                   placeholder="Ingredient name" 
+                                   value="Test Ingredient ${ingredientIndex + 1}">
+                        </div>
+                        <div class="ingredient-weight-container">
+                            <input type="number" 
+                                   class="ingredient-weight" 
+                                   placeholder="Weight (g)" 
+                                   value="${100 + ingredientIndex * 50}">
+                        </div>
+                    </div>
+                    <div class="ingredient-row-2">
+                        <div class="ingredient-barcode-container">
+                            <input type="text" 
+                                   class="ingredient-barcode" 
+                                   placeholder="Barcode (optional)" 
+                                   value="TEST${String(ingredientIndex + 1).padStart(3, '0')}">
+                        </div>
+                        <div class="ingredient-actions">
+                            <button type="button" class="barcode-button" onclick="generateTestBarcode('TEST${String(ingredientIndex + 1).padStart(3, '0')}')" title="Generate Barcode">
+                                📊
+                            </button>
+                            <button type="button" class="remove-ingredient" onclick="this.closest('.ingredient-item').remove()">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                ingredientsList.appendChild(ingredientDiv);
+                ingredientIndex++;
+            });
+            
+            // Test 2: Barcode Generation
+            document.getElementById('generate-barcode-btn').addEventListener('click', () => {
+                const input = document.getElementById('barcode-test-input');
+                const result = document.getElementById('barcode-result');
+                const text = input.value.trim();
+                
+                if (!text) {
+                    result.innerHTML = '<p style="color: red;">Please enter barcode text</p>';
+                    return;
+                }
+                
+                try {
+                    if (!barcodeGenerator.isValidBarcodeText(text)) {
+                        result.innerHTML = `<p style="color: red;">Invalid barcode text. Supported: ${barcodeGenerator.getSupportedCharacters()}</p>`;
+                        return;
+                    }
+                    
+                    const barcodeDataURL = barcodeGenerator.generateBarcodeDataURL(text, {
+                        width: 300,
+                        height: 100,
+                        showText: true
+                    });
+                    
+                    result.innerHTML = `
+                        <div class="barcode-display">
+                            <h4>Generated Barcode</h4>
+                            <img src="${barcodeDataURL}" class="barcode-image" alt="Generated Barcode">
+                            <div class="barcode-text">${text}</div>
+                        </div>
+                    `;
+                } catch (error) {
+                    result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                }
+            });
+            
+            // Test 3: Recipe Ingredients Expansion
+            const testRecipe = {
+                id: 'test-recipe-1',
+                name: 'Test Recipe',
+                ingredients: [
+                    { name: 'Flour', weight: 250, barcode: 'FLOUR001' },
+                    { name: 'Sugar', weight: 150, barcode: null },
+                    { name: 'Butter', weight: 100, barcode: 'BUTTER001' }
+                ]
+            };
+            
+            document.getElementById('test-toggle-btn').addEventListener('click', function() {
+                const recipeCard = this.closest('.recipe-card');
+                let ingredientsDiv = recipeCard.querySelector('.recipe-ingredients-expanded');
+                
+                if (ingredientsDiv) {
+                    // Hide ingredients
+                    ingredientsDiv.remove();
+                    this.textContent = 'Show ingredients';
+                } else {
+                    // Show ingredients
+                    ingredientsDiv = document.createElement('div');
+                    ingredientsDiv.className = 'recipe-ingredients-expanded';
+                    
+                    ingredientsDiv.innerHTML = `
+                        <h4>Ingredients (${testRecipe.ingredients.length} items)</h4>
+                        <ul class="ingredient-list">
+                            ${testRecipe.ingredients.map(ingredient => `
+                                <li>
+                                    <span class="ingredient-name">${ingredient.name}</span>
+                                    <span class="ingredient-weight">${ingredient.weight}g</span>
+                                    ${ingredient.barcode ? `<span class="ingredient-barcode-info">${ingredient.barcode}</span>` : ''}
+                                    ${ingredient.barcode ? `<button type="button" class="barcode-button" onclick="generateTestBarcode('${ingredient.barcode}')" title="Show Barcode">📊</button>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                    
+                    // Insert after recipe details
+                    const recipeDetails = recipeCard.querySelector('.recipe-details');
+                    recipeDetails.appendChild(ingredientsDiv);
+                    this.textContent = 'Hide ingredients';
+                }
+            });
+            
+            // Add initial test ingredient
+            document.getElementById('add-test-ingredient').click();
+        });
+        
+        // Global function for barcode generation
+        function generateTestBarcode(barcodeText) {
+            const barcodeGenerator = new BarcodeGenerator();
+            
+            try {
+                const barcodeDataURL = barcodeGenerator.generateBarcodeDataURL(barcodeText, {
+                    width: 300,
+                    height: 100,
+                    showText: true
+                });
+                
+                // Create a simple modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.8); z-index: 1000; 
+                    display: flex; align-items: center; justify-content: center;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 90vw;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0;">Generated Barcode</h3>
+                            <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                        </div>
+                        <div class="barcode-display">
+                            <img src="${barcodeDataURL}" class="barcode-image" alt="Generated Barcode">
+                            <div class="barcode-text">${barcodeText}</div>
+                            <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
+                                This barcode can be scanned by barcode scanner apps
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+                
+                document.body.appendChild(modal);
+                
+            } catch (error) {
+                alert('Error generating barcode: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

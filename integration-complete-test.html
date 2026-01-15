@@ -399,6 +399,113 @@
                     throw new Error('Complete consumption workflow failed');
                 }
 
+                // Test 13: Recipe Copy Functionality
+                addTestResult('📋 Testing recipe copy functionality', 'info');
+                
+                const copiedRecipe = recipeManager.copyRecipe(testRecipe.id, 'Integration Test Cake Copy');
+                
+                if (copiedRecipe.name === 'Integration Test Cake Copy' && 
+                    copiedRecipe.totalWeight === testRecipe.totalWeight &&
+                    copiedRecipe.remainingWeight === copiedRecipe.totalWeight &&
+                    copiedRecipe.ingredients.length === testRecipe.ingredients.length) {
+                    
+                    addTestResult('✅ Recipe copy functionality working correctly', 'success');
+                    addTestDetails({
+                        originalName: testRecipe.name,
+                        copiedName: copiedRecipe.name,
+                        originalTotalWeight: testRecipe.totalWeight,
+                        copiedTotalWeight: copiedRecipe.totalWeight,
+                        originalRemainingWeight: testRecipe.remainingWeight,
+                        copiedRemainingWeight: copiedRecipe.remainingWeight,
+                        ingredientCount: copiedRecipe.ingredients.length,
+                        consumptionReset: copiedRecipe.remainingWeight === copiedRecipe.totalWeight
+                    }, 'Recipe Copy Results');
+                } else {
+                    addTestResult('❌ Recipe copy functionality failed', 'error');
+                    throw new Error('Recipe copy functionality failed');
+                }
+
+                // Test duplicate copy prevention
+                try {
+                    recipeManager.copyRecipe(testRecipe.id, 'Integration Test Cake Copy');
+                    addTestResult('❌ Duplicate copy name not prevented', 'error');
+                } catch (error) {
+                    if (error.message.includes('already exists')) {
+                        addTestResult('✅ Duplicate copy name correctly prevented', 'success');
+                    } else {
+                        addTestResult('⚠️ Unexpected error in duplicate prevention', 'warning');
+                    }
+                }
+
+                // Test 14: Recipe Reset Functionality
+                addTestResult('🔄 Testing recipe reset functionality', 'info');
+                
+                const resetRecipe = recipeManager.resetRecipe(testRecipe.id);
+                
+                if (resetRecipe.remainingWeight === resetRecipe.totalWeight &&
+                    !resetRecipe.isFullyConsumed() &&
+                    resetRecipe.lastConsumed === null) {
+                    
+                    addTestResult('✅ Recipe reset functionality working correctly', 'success');
+                    addTestDetails({
+                        recipeName: resetRecipe.name,
+                        totalWeight: resetRecipe.totalWeight,
+                        remainingWeightAfterReset: resetRecipe.remainingWeight,
+                        isFullyConsumedAfterReset: resetRecipe.isFullyConsumed(),
+                        lastConsumedAfterReset: resetRecipe.lastConsumed,
+                        consumptionPercentageAfterReset: resetRecipe.getConsumptionPercentage()
+                    }, 'Recipe Reset Results');
+                } else {
+                    addTestResult('❌ Recipe reset functionality failed', 'error');
+                    throw new Error('Recipe reset functionality failed');
+                }
+
+                // Test 15: Barcode Generator Functionality
+                addTestResult('📊 Testing barcode generator functionality', 'info');
+                
+                const barcodeGenerator = new BarcodeGenerator();
+                
+                // Test basic barcode generation
+                const testBarcodeText = 'TEST123';
+                const generatedBarcode = barcodeGenerator.generateBarcode(testBarcodeText);
+                const barcodeDataURL = barcodeGenerator.generateBarcodeDataURL(testBarcodeText);
+                
+                if (generatedBarcode.includes('<svg') && 
+                    barcodeDataURL.startsWith('data:image/svg+xml;base64,') &&
+                    barcodeGenerator.isValidBarcodeText(testBarcodeText)) {
+                    
+                    addTestResult('✅ Barcode generator functionality working correctly', 'success');
+                    addTestDetails({
+                        testText: testBarcodeText,
+                        svgGenerated: generatedBarcode.includes('<svg'),
+                        dataUrlGenerated: barcodeDataURL.startsWith('data:image/svg+xml;base64,'),
+                        validationWorking: barcodeGenerator.isValidBarcodeText(testBarcodeText),
+                        supportedCharacters: barcodeGenerator.getSupportedCharacters(),
+                        invalidTextRejected: !barcodeGenerator.isValidBarcodeText('')
+                    }, 'Barcode Generator Results');
+                } else {
+                    addTestResult('❌ Barcode generator functionality failed', 'error');
+                    throw new Error('Barcode generator functionality failed');
+                }
+
+                // Test 16: UI Controller New Methods
+                addTestResult('🖥️ Testing UI Controller new methods', 'info');
+                
+                if (typeof uiController.copyRecipe === 'function' && 
+                    typeof uiController.resetRecipe === 'function') {
+                    
+                    addTestResult('✅ UI Controller new methods available', 'success');
+                    addTestDetails({
+                        copyMethodExists: typeof uiController.copyRecipe === 'function',
+                        resetMethodExists: typeof uiController.resetRecipe === 'function',
+                        toggleIngredientsExists: typeof uiController.toggleRecipeIngredients === 'function',
+                        showBarcodeModalExists: typeof uiController.showBarcodeModal === 'function'
+                    }, 'UI Controller Method Availability');
+                } else {
+                    addTestResult('❌ UI Controller new methods missing', 'error');
+                    throw new Error('UI Controller new methods missing');
+                }
+
                 // Test 13: Multi-Recipe Management
                 addTestResult('📚 Testing multi-recipe management', 'info');
                 

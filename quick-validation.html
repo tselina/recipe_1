@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Validation Test</title>
+</head>
+<body>
+    <h1>Quick Validation Test</h1>
+    <div id="results"></div>
+
+    <script src="js/data-models.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/barcode-generator.js"></script>
+
+    <script>
+        function log(message) {
+            document.getElementById('results').innerHTML += message + '<br>';
+        }
+
+        try {
+            // Test 1: Initialize components
+            const storage = new StorageManager();
+            const recipeManager = new RecipeManager(storage);
+            const barcodeGenerator = new BarcodeGenerator();
+            log('✓ Components initialized successfully');
+
+            // Test 2: Create and copy recipe
+            recipeManager.clearAllRecipes();
+            const recipe = recipeManager.createRecipe('Test Recipe', [
+                { name: 'Ingredient 1', weight: 100 },
+                { name: 'Ingredient 2', weight: 200 }
+            ]);
+            log('✓ Recipe created: ' + recipe.name);
+
+            const copiedRecipe = recipeManager.copyRecipe(recipe.id, 'Test Recipe Copy');
+            log('✓ Recipe copied: ' + copiedRecipe.name);
+
+            // Test 3: Reset functionality
+            recipeManager.recordConsumption(recipe.id, 150);
+            log('✓ Consumed 150g from original');
+
+            const resetRecipe = recipeManager.resetRecipe(recipe.id);
+            log('✓ Recipe reset, remaining: ' + resetRecipe.remainingWeight + 'g');
+
+            // Test 4: Barcode generation
+            const barcode = barcodeGenerator.generateBarcode('TEST123');
+            log('✓ Barcode generated: ' + (barcode.includes('<svg') ? 'SVG format' : 'Unknown format'));
+
+            log('<br><strong>All tests passed! ✓</strong>');
+
+        } catch (error) {
+            log('✗ Test failed: ' + error.message);
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

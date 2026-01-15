@@ -233,6 +233,14 @@ class Recipe {
     }
 
     /**
+     * Resets the recipe consumption back to original state
+     */
+    resetConsumption() {
+        this.remainingWeight = this.totalWeight;
+        this.lastConsumed = null;
+    }
+
+    /**
      * Checks if the recipe is fully consumed
      * @returns {boolean} True if fully consumed
      */

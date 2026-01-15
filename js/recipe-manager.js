@@ -379,7 +379,111 @@ class RecipeManager {
     }
 
     /**
-     * Clears all recipes from storage
+     * Creates a copy of an existing recipe with a new name
+     * @param {string} recipeId - ID of recipe to copy
+     * @param {string} newName - Name for the copied recipe
+     * @returns {Recipe} Created recipe copy
+     * @throws {Error} If validation fails or recipe not found
+     */
+    copyRecipe(recipeId, newName) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!newName || typeof newName !== 'string') {
+                throw new Error('New recipe name must be a non-empty string');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe to copy
+            const originalRecipe = recipes.find(r => r.id === recipeId);
+            if (!originalRecipe) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            // Validate new name
+            const nameValidation = this.storage.validateRecipeName(newName);
+            if (!nameValidation.isValid) {
+                throw new Error(`Invalid recipe name: ${nameValidation.error}`);
+            }
+
+            // Check for duplicate recipe names
+            const existingRecipe = recipes.find(r => 
+                r.name.toLowerCase() === newName.toLowerCase()
+            );
+            
+            if (existingRecipe) {
+                throw new Error(`Recipe "${newName}" already exists`);
+            }
+
+            // Create copy with fresh ingredients (reset consumption)
+            const ingredientsCopy = originalRecipe.ingredients.map(ingredient => ({
+                name: ingredient.name,
+                weight: ingredient.weight,
+                barcode: ingredient.barcode || null
+            }));
+
+            // Create new recipe instance
+            const RecipeClass = window.Recipe || (typeof Recipe !== 'undefined' ? Recipe : null);
+            if (!RecipeClass) {
+                throw new Error('Recipe class not available');
+            }
+            const copiedRecipe = new RecipeClass(newName, ingredientsCopy);
+            
+            // Add to recipes array
+            recipes.push(copiedRecipe);
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return copiedRecipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to copy recipe: ${error.message}`);
+        }
+    }
+
+    /**
+     * Resets a recipe's consumption back to original state
+     * @param {string} recipeId - ID of recipe to reset
+     * @returns {Recipe} Reset recipe
+     * @throws {Error} If recipe not found
+     */
+    resetRecipe(recipeId) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe to reset
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Reset consumption
+            recipe.resetConsumption();
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to reset recipe: ${error.message}`);
+        }
+    }
+
+    /**
+     * Clears all recipes from storage (for testing purposes)
      * @returns {boolean} True if successful
      */
     clearAllRecipes() {

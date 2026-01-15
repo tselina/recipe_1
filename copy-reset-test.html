@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copy & Reset Features Test - Recipe Portion Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-results {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Copy & Reset Features Test</h1>
+        <p>This test verifies the new copy and reset functionality for recipes.</p>
+
+        <div class="test-section">
+            <h3>Test 1: Recipe Copy Functionality</h3>
+            <button onclick="testRecipeCopy()" class="btn btn-primary">Run Copy Test</button>
+            <div id="copy-results" class="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Recipe Reset Functionality</h3>
+            <button onclick="testRecipeReset()" class="btn btn-primary">Run Reset Test</button>
+            <div id="reset-results" class="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Barcode Generator Fix</h3>
+            <button onclick="testBarcodeGenerator()" class="btn btn-primary">Run Barcode Test</button>
+            <div id="barcode-results" class="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: UI Integration</h3>
+            <button onclick="testUIIntegration()" class="btn btn-primary">Run UI Test</button>
+            <div id="ui-results" class="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 5: Complete Workflow</h3>
+            <button onclick="testCompleteWorkflow()" class="btn btn-primary">Run Complete Test</button>
+            <div id="workflow-results" class="test-results"></div>
+        </div>
+    </div>
+
+    <!-- Include all necessary scripts -->
+    <script src="js/data-models.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/barcode-generator.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/ui-controller.js"></script>
+
+    <script>
+        // Initialize components for testing
+        let storage, recipeManager, barcodeGenerator;
+
+        function initializeComponents() {
+            try {
+                storage = new StorageManager();
+                recipeManager = new RecipeManager(storage);
+                barcodeGenerator = new BarcodeGenerator();
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize components:', error);
+                return false;
+            }
+        }
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+        }
+
+        function clearResults(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        async function testRecipeCopy() {
+            clearResults('copy-results');
+            log('copy-results', 'Starting Recipe Copy Test...');
+
+            if (!initializeComponents()) {
+                log('copy-results', 'Failed to initialize components', 'error');
+                return;
+            }
+
+            try {
+                // Clear existing data
+                recipeManager.clearAllRecipes();
+                log('copy-results', 'Cleared existing recipes');
+
+                // Create a test recipe
+                const ingredients = [
+                    { name: 'Flour', weight: 500, barcode: '1234567890' },
+                    { name: 'Sugar', weight: 200, barcode: null },
+                    { name: 'Eggs', weight: 150, barcode: '0987654321' }
+                ];
+
+                const originalRecipe = recipeManager.createRecipe('Test Cake', ingredients);
+                log('copy-results', `Created original recipe: ${originalRecipe.name} (${originalRecipe.totalWeight}g)`);
+
+                // Consume some of the original recipe
+                recipeManager.recordConsumption(originalRecipe.id, 200);
+                log('copy-results', `Consumed 200g from original recipe. Remaining: ${originalRecipe.remainingWeight}g`);
+
+                // Test copying the recipe
+                const copiedRecipe = recipeManager.copyRecipe(originalRecipe.id, 'Test Cake Copy');
+                log('copy-results', `Copied recipe: ${copiedRecipe.name} (${copiedRecipe.totalWeight}g)`);
+
+                // Verify copy properties
+                if (copiedRecipe.name === 'Test Cake Copy') {
+                    log('copy-results', '✓ Copy has correct name', 'success');
+                } else {
+                    log('copy-results', '✗ Copy name incorrect', 'error');
+                }
+
+                if (copiedRecipe.totalWeight === originalRecipe.totalWeight) {
+                    log('copy-results', '✓ Copy has same total weight as original', 'success');
+                } else {
+                    log('copy-results', '✗ Copy total weight differs from original', 'error');
+                }
+
+                if (copiedRecipe.remainingWeight === copiedRecipe.totalWeight) {
+                    log('copy-results', '✓ Copy has full remaining weight (consumption reset)', 'success');
+                } else {
+                    log('copy-results', '✗ Copy remaining weight not reset', 'error');
+                }
+
+                if (copiedRecipe.ingredients.length === originalRecipe.ingredients.length) {
+                    log('copy-results', '✓ Copy has same number of ingredients', 'success');
+                } else {
+                    log('copy-results', '✗ Copy ingredient count differs', 'error');
+                }
+
+                // Test duplicate name prevention
+                try {
+                    recipeManager.copyRecipe(originalRecipe.id, 'Test Cake Copy');
+                    log('copy-results', '✗ Duplicate name not prevented', 'error');
+                } catch (error) {
+                    log('copy-results', '✓ Duplicate name correctly prevented', 'success');
+                }
+
+                log('copy-results', 'Recipe Copy Test Completed!', 'success');
+
+            } catch (error) {
+                log('copy-results', `Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testRecipeReset() {
+            clearResults('reset-results');
+            log('reset-results', 'Starting Recipe Reset Test...');
+
+            if (!initializeComponents()) {
+                log('reset-results', 'Failed to initialize components', 'error');
+                return;
+            }
+
+            try {
+                // Clear existing data
+                recipeManager.clearAllRecipes();
+                log('reset-results', 'Cleared existing recipes');
+
+                // Create a test recipe
+                const ingredients = [
+                    { name: 'Pasta', weight: 400 },
+                    { name: 'Tomato Sauce', weight: 300 },
+                    { name: 'Cheese', weight: 100 }
+                ];
+
+                const recipe = recipeManager.createRecipe('Pasta Dish', ingredients);
+                log('reset-results', `Created recipe: ${recipe.name} (${recipe.totalWeight}g)`);
+
+                // Consume some of the recipe
+                recipeManager.recordConsumption(recipe.id, 300);
+                const partiallyConsumed = recipeManager.getRecipeById(recipe.id);
+                log('reset-results', `Consumed 300g. Remaining: ${partiallyConsumed.remainingWeight}g`);
+
+                // Consume all remaining
+                recipeManager.markAsFullyConsumed(recipe.id);
+                const fullyConsumed = recipeManager.getRecipeById(recipe.id);
+                log('reset-results', `Marked as fully consumed. Remaining: ${fullyConsumed.remainingWeight}g`);
+
+                if (fullyConsumed.isFullyConsumed()) {
+                    log('reset-results', '✓ Recipe correctly marked as fully consumed', 'success');
+                } else {
+                    log('reset-results', '✗ Recipe not marked as fully consumed', 'error');
+                }
+
+                // Test resetting the recipe
+                const resetRecipe = recipeManager.resetRecipe(recipe.id);
+                log('reset-results', `Reset recipe. Remaining: ${resetRecipe.remainingWeight}g`);
+
+                if (resetRecipe.remainingWeight === resetRecipe.totalWeight) {
+                    log('reset-results', '✓ Recipe remaining weight correctly reset to total', 'success');
+                } else {
+                    log('reset-results', '✗ Recipe remaining weight not correctly reset', 'error');
+                }
+
+                if (!resetRecipe.isFullyConsumed()) {
+                    log('reset-results', '✓ Recipe no longer marked as fully consumed', 'success');
+                } else {
+                    log('reset-results', '✗ Recipe still marked as fully consumed after reset', 'error');
+                }
+
+                if (resetRecipe.lastConsumed === null) {
+                    log('reset-results', '✓ Last consumed timestamp correctly cleared', 'success');
+                } else {
+                    log('reset-results', '✗ Last consumed timestamp not cleared', 'error');
+                }
+
+                log('reset-results', 'Recipe Reset Test Completed!', 'success');
+
+            } catch (error) {
+                log('reset-results', `Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBarcodeGenerator() {
+            clearResults('barcode-results');
+            log('barcode-results', 'Starting Barcode Generator Test...');
+
+            if (!initializeComponents()) {
+                log('barcode-results', 'Failed to initialize components', 'error');
+                return;
+            }
+
+            try {
+                // Test basic barcode generation
+                const testText = 'TEST123';
+                const barcode = barcodeGenerator.generateBarcode(testText);
+                log('barcode-results', `Generated barcode for "${testText}"`);
+
+                if (barcode && barcode.includes('<svg')) {
+                    log('barcode-results', '✓ Barcode generated as SVG', 'success');
+                } else {
+                    log('barcode-results', '✗ Barcode not generated as SVG', 'error');
+                }
+
+                // Test data URL generation
+                const dataURL = barcodeGenerator.generateBarcodeDataURL(testText);
+                if (dataURL && dataURL.startsWith('data:image/svg+xml;base64,')) {
+                    log('barcode-results', '✓ Data URL generated correctly', 'success');
+                } else {
+                    log('barcode-results', '✗ Data URL not generated correctly', 'error');
+                }
+
+                // Test validation
+                if (barcodeGenerator.isValidBarcodeText('ABC123')) {
+                    log('barcode-results', '✓ Valid text correctly validated', 'success');
+                } else {
+                    log('barcode-results', '✗ Valid text validation failed', 'error');
+                }
+
+                if (!barcodeGenerator.isValidBarcodeText('')) {
+                    log('barcode-results', '✓ Empty text correctly rejected', 'success');
+                } else {
+                    log('barcode-results', '✗ Empty text not rejected', 'error');
+                }
+
+                // Test supported characters
+                const supportedChars = barcodeGenerator.getSupportedCharacters();
+                log('barcode-results', `Supported characters: ${supportedChars}`);
+
+                log('barcode-results', 'Barcode Generator Test Completed!', 'success');
+
+            } catch (error) {
+                log('barcode-results', `Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUIIntegration() {
+            clearResults('ui-results');
+            log('ui-results', 'Starting UI Integration Test...');
+
+            try {
+                // Test if UIController has the new methods
+                if (typeof UIController !== 'undefined') {
+                    // Create mock dependencies for UIController
+                    const mockRecipeManager = { getAllRecipes: () => [] };
+                    const mockPortionCalculator = {};
+                    const mockProductDatabase = {};
+                    const mockStorageManager = {};
+                    
+                    const uiController = new UIController(mockRecipeManager, mockPortionCalculator, mockProductDatabase, mockStorageManager);
+                    
+                    if (typeof uiController.copyRecipe === 'function') {
+                        log('ui-results', '✓ copyRecipe method exists in UIController', 'success');
+                    } else {
+                        log('ui-results', '✗ copyRecipe method missing in UIController', 'error');
+                    }
+
+                    if (typeof uiController.resetRecipe === 'function') {
+                        log('ui-results', '✓ resetRecipe method exists in UIController', 'success');
+                    } else {
+                        log('ui-results', '✗ resetRecipe method missing in UIController', 'error');
+                    }
+
+                    if (typeof uiController.toggleRecipeIngredients === 'function') {
+                        log('ui-results', '✓ toggleRecipeIngredients method exists in UIController', 'success');
+                    } else {
+                        log('ui-results', '✗ toggleRecipeIngredients method missing in UIController', 'error');
+                    }
+
+                    if (typeof uiController.showBarcodeModal === 'function') {
+                        log('ui-results', '✓ showBarcodeModal method exists in UIController', 'success');
+                    } else {
+                        log('ui-results', '✗ showBarcodeModal method missing in UIController', 'error');
+                    }
+                } else {
+                    log('ui-results', '✗ UIController class not available', 'error');
+                }
+
+                // Test CSS classes
+                const testDiv = document.createElement('div');
+                testDiv.className = 'btn btn-warning btn-small';
+                document.body.appendChild(testDiv);
+                
+                const styles = window.getComputedStyle(testDiv);
+                if (styles.backgroundColor && styles.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+                    log('ui-results', '✓ Warning button styles applied', 'success');
+                } else {
+                    log('ui-results', '✗ Warning button styles not applied', 'error');
+                }
+                
+                document.body.removeChild(testDiv);
+
+                // Test BarcodeScanner availability (optional)
+                if (typeof BarcodeScanner !== 'undefined') {
+                    log('ui-results', '✓ BarcodeScanner class available', 'success');
+                } else {
+                    log('ui-results', '⚠ BarcodeScanner class not available (optional)', 'warning');
+                }
+
+                log('ui-results', 'UI Integration Test Completed!', 'success');
+
+            } catch (error) {
+                log('ui-results', `Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCompleteWorkflow() {
+            clearResults('workflow-results');
+            log('workflow-results', 'Starting Complete Workflow Test...');
+
+            if (!initializeComponents()) {
+                log('workflow-results', 'Failed to initialize components', 'error');
+                return;
+            }
+
+            try {
+                // Clear existing data
+                recipeManager.clearAllRecipes();
+                log('workflow-results', 'Cleared existing recipes');
+
+                // Step 1: Create original recipe
+                const ingredients = [
+                    { name: 'Chicken', weight: 1000, barcode: 'CHK001' },
+                    { name: 'Rice', weight: 500, barcode: 'RICE001' },
+                    { name: 'Vegetables', weight: 300 }
+                ];
+
+                const originalRecipe = recipeManager.createRecipe('Chicken Rice Bowl', ingredients);
+                log('workflow-results', `Step 1: Created "${originalRecipe.name}" (${originalRecipe.totalWeight}g)`);
+
+                // Step 2: Consume part of original
+                recipeManager.recordConsumption(originalRecipe.id, 600);
+                log('workflow-results', `Step 2: Consumed 600g, remaining: ${originalRecipe.remainingWeight}g`);
+
+                // Step 3: Copy the recipe
+                const copiedRecipe = recipeManager.copyRecipe(originalRecipe.id, 'Chicken Rice Bowl v2');
+                log('workflow-results', `Step 3: Copied to "${copiedRecipe.name}" (${copiedRecipe.remainingWeight}g remaining)`);
+
+                // Step 4: Fully consume original
+                recipeManager.markAsFullyConsumed(originalRecipe.id);
+                const consumedOriginal = recipeManager.getRecipeById(originalRecipe.id);
+                log('workflow-results', `Step 4: Fully consumed original (${consumedOriginal.remainingWeight}g remaining)`);
+
+                // Step 5: Reset original
+                const resetOriginal = recipeManager.resetRecipe(originalRecipe.id);
+                log('workflow-results', `Step 5: Reset original (${resetOriginal.remainingWeight}g remaining)`);
+
+                // Step 6: Test barcode generation for ingredients
+                const testBarcode = 'CHK001';
+                const barcodeDataURL = barcodeGenerator.generateBarcodeDataURL(testBarcode);
+                log('workflow-results', `Step 6: Generated barcode for ${testBarcode}`);
+
+                // Verify final state
+                const allRecipes = recipeManager.getAllRecipes();
+                log('workflow-results', `Final state: ${allRecipes.length} recipes in system`);
+
+                const activeRecipes = recipeManager.getActiveRecipes();
+                log('workflow-results', `Active recipes: ${activeRecipes.length}`);
+
+                if (allRecipes.length === 2 && activeRecipes.length === 2) {
+                    log('workflow-results', '✓ Complete workflow successful!', 'success');
+                } else {
+                    log('workflow-results', '✗ Workflow state incorrect', 'error');
+                }
+
+                log('workflow-results', 'Complete Workflow Test Completed!', 'success');
+
+            } catch (error) {
+                log('workflow-results', `Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Copy & Reset Features Test Page Loaded');
+        });
+    </script>
+</body>
+</html>

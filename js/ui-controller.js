@@ -12,8 +12,13 @@ class UIController {
         this.currentView = 'recipe-list-view';
         this.isOnline = navigator.onLine;
         
-        // Initialize barcode scanner
-        this.barcodeScanner = new BarcodeScanner();
+        // Initialize barcode scanner (optional)
+        try {
+            this.barcodeScanner = typeof BarcodeScanner !== 'undefined' ? new BarcodeScanner() : null;
+        } catch (error) {
+            console.warn('BarcodeScanner not available:', error.message);
+            this.barcodeScanner = null;
+        }
         this.currentScanningInput = null;
         
         // Initialize barcode generator
@@ -419,6 +424,12 @@ class UIController {
                 <button class="btn btn-secondary btn-small calculate-btn" data-recipe-id="${recipe.id}" ${isFullyConsumed ? 'disabled' : ''}>
                     ${isFullyConsumed ? 'Completed' : 'Calculate Portions'}
                 </button>
+                <button class="btn btn-primary btn-small copy-btn" data-recipe-id="${recipe.id}">
+                    Copy
+                </button>
+                <button class="btn btn-warning btn-small reset-btn" data-recipe-id="${recipe.id}" ${isFullyConsumed ? '' : 'disabled'}>
+                    Reset
+                </button>
                 <button class="btn btn-danger btn-small delete-btn" data-recipe-id="${recipe.id}">
                     Delete
                 </button>
@@ -427,11 +438,23 @@ class UIController {
         
         // Add event listeners
         const calculateBtn = card.querySelector('.calculate-btn');
+        const copyBtn = card.querySelector('.copy-btn');
+        const resetBtn = card.querySelector('.reset-btn');
         const deleteBtn = card.querySelector('.delete-btn');
         
         if (!isFullyConsumed) {
             calculateBtn.addEventListener('click', () => {
                 this.selectRecipeForCalculation(recipe.id);
+            });
+        }
+
+        copyBtn.addEventListener('click', () => {
+            this.copyRecipe(recipe.id);
+        });
+
+        if (isFullyConsumed) {
+            resetBtn.addEventListener('click', () => {
+                this.resetRecipe(recipe.id);
             });
         }
         
@@ -475,6 +498,66 @@ class UIController {
                 console.error('Failed to delete recipe:', error);
                 this.showErrorMessage('Failed to delete recipe');
             }
+        }
+    }
+
+    /**
+     * Copy a recipe with user input for new name
+     * @param {string} recipeId - ID of recipe to copy
+     */
+    copyRecipe(recipeId) {
+        try {
+            const originalRecipe = this.recipeManager.getRecipeById(recipeId);
+            if (!originalRecipe) {
+                this.showErrorMessage('Recipe not found');
+                return;
+            }
+
+            const newName = prompt(`Enter a name for the copy of "${originalRecipe.name}":`, `${originalRecipe.name} (Copy)`);
+            
+            if (newName === null) {
+                // User cancelled
+                return;
+            }
+
+            if (!newName || newName.trim().length === 0) {
+                this.showErrorMessage('Recipe name cannot be empty');
+                return;
+            }
+
+            const copiedRecipe = this.recipeManager.copyRecipe(recipeId, newName.trim());
+            this.showSuccessMessage(`Recipe "${copiedRecipe.name}" created successfully!`);
+            this.updateRecipeList();
+            this.updateRecipeSelector();
+
+        } catch (error) {
+            console.error('Failed to copy recipe:', error);
+            this.showErrorMessage(error.message || 'Failed to copy recipe');
+        }
+    }
+
+    /**
+     * Reset a recipe's consumption with confirmation
+     * @param {string} recipeId - ID of recipe to reset
+     */
+    resetRecipe(recipeId) {
+        try {
+            const recipe = this.recipeManager.getRecipeById(recipeId);
+            if (!recipe) {
+                this.showErrorMessage('Recipe not found');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to reset "${recipe.name}" back to its original state? This will restore all consumed portions.`)) {
+                const resetRecipe = this.recipeManager.resetRecipe(recipeId);
+                this.showSuccessMessage(`Recipe "${resetRecipe.name}" has been reset to original state`);
+                this.updateRecipeList();
+                this.updateRecipeSelector();
+            }
+
+        } catch (error) {
+            console.error('Failed to reset recipe:', error);
+            this.showErrorMessage(error.message || 'Failed to reset recipe');
         }
     }
 
@@ -809,7 +892,7 @@ class UIController {
         
         // Set up barcode scan button
         const scanBtn = ingredientDiv.querySelector('.scan-barcode');
-        if (this.barcodeScanner.isSupported) {
+        if (this.barcodeScanner && this.barcodeScanner.isSupported) {
             scanBtn.addEventListener('click', () => {
                 this.startBarcodeScanning(ingredientIndex);
             });
@@ -1553,7 +1636,7 @@ class UIController {
      * @param {number} ingredientIndex - Index of ingredient input
      */
     async startBarcodeScanning(ingredientIndex) {
-        if (!this.barcodeScanner.isSupported) {
+        if (!this.barcodeScanner || !this.barcodeScanner.isSupported) {
             this.showErrorMessage('Barcode scanning is not supported on this device');
             return;
         }
@@ -1653,7 +1736,9 @@ class UIController {
         document.body.classList.remove('modal-open');
         
         // Stop scanning
-        this.barcodeScanner.stopScanning();
+        if (this.barcodeScanner) {
+            this.barcodeScanner.stopScanning();
+        }
         this.currentScanningInput = null;
     }
 
@@ -1864,7 +1949,7 @@ class UIController {
     updateBarcodeScannerUI() {
         const scanButtons = document.querySelectorAll('.scan-barcode');
         
-        if (this.barcodeScanner.isSupported) {
+        if (this.barcodeScanner && this.barcodeScanner.isSupported) {
             scanButtons.forEach(btn => {
                 btn.style.display = 'inline-block';
                 btn.title = 'Scan Barcode';

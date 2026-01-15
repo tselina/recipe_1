@@ -4,7 +4,7 @@
  */
 class BarcodeGenerator {
     constructor() {
-        // Code 39 character set
+        // Code 39 character set - corrected patterns
         this.code39 = {
             '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
             '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
@@ -16,6 +16,20 @@ class BarcodeGenerator {
             'S': '101101001011', 'T': '101011001101', 'U': '110010101011', 'V': '100110101011',
             'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
             '-': '100101011011', '.': '110010101101', ' ': '100110101101', '*': '100101101101'
+        };
+        
+        // Correct Code 39 patterns (wide=1, narrow=0 for bars and spaces)
+        this.code39Correct = {
+            '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw', '3': 'wnwwnnnnn',
+            '4': 'nnnwwnnnw', '5': 'wnnwwnnnn', '6': 'nnwwwnnnn', '7': 'nnnwnnwnw',
+            '8': 'wnnwnnwnn', '9': 'nnwwnnwnn', 'A': 'wnnnnwnnw', 'B': 'nnwnnwnnw',
+            'C': 'wnwnnwnnn', 'D': 'nnnnwwnnw', 'E': 'wnnnwwnnn', 'F': 'nnwnwwnnn',
+            'G': 'nnnnnwwnw', 'H': 'wnnnnwwnn', 'I': 'nnwnnwwnn', 'J': 'nnnnwwwnn',
+            'K': 'wnnnnnnww', 'L': 'nnwnnnnww', 'M': 'wnwnnnnwn', 'N': 'nnnnwnnww',
+            'O': 'wnnnwnnwn', 'P': 'nnwnwnnwn', 'Q': 'nnnnnnwww', 'R': 'wnnnnnwwn',
+            'S': 'nnwnnnwwn', 'T': 'nnnnwnwwn', 'U': 'wwnnnnnnw', 'V': 'nwwnnnnnw',
+            'W': 'wwwnnnnnn', 'X': 'nwnnwnnnw', 'Y': 'wwnnwnnnn', 'Z': 'nwwnwnnnn',
+            '-': 'nwnnnnwnw', '.': 'wwnnnnwnn', ' ': 'nwwnnnwnn', '*': 'nwnnwnwnn'
         };
     }
 
@@ -63,19 +77,50 @@ class BarcodeGenerator {
         let binary = '';
         
         // Start character (*)
-        binary += this.code39['*'] + '0';
+        binary += this.convertPatternToBinary(this.code39Correct['*']) + '0';
         
         // Encode each character
         for (let char of text) {
-            if (this.code39[char]) {
-                binary += this.code39[char] + '0'; // Add separator
+            if (this.code39Correct[char]) {
+                binary += this.convertPatternToBinary(this.code39Correct[char]) + '0'; // Add separator
             } else {
                 console.warn(`Character '${char}' not supported in Code 39, skipping`);
             }
         }
         
         // End character (*)
-        binary += this.code39['*'];
+        binary += this.convertPatternToBinary(this.code39Correct['*']);
+        
+        return binary;
+    }
+
+    /**
+     * Convert Code 39 pattern to binary string
+     * @param {string} pattern - Pattern with 'n' (narrow) and 'w' (wide)
+     * @returns {string} Binary string
+     */
+    convertPatternToBinary(pattern) {
+        let binary = '';
+        let isBar = true; // Start with bar
+        
+        for (let char of pattern) {
+            if (isBar) {
+                // Bar (black)
+                if (char === 'n') {
+                    binary += '1'; // Narrow bar
+                } else {
+                    binary += '111'; // Wide bar
+                }
+            } else {
+                // Space (white)
+                if (char === 'n') {
+                    binary += '0'; // Narrow space
+                } else {
+                    binary += '000'; // Wide space
+                }
+            }
+            isBar = !isBar; // Alternate between bar and space
+        }
         
         return binary;
     }

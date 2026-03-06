@@ -5,101 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Copy & Reset Test</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #d1ecf1; color: #0c5460; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h1>Simple Copy & Reset Test</h1>
-    <div id="results"></div>
+    <div class="container">
+        <h1>Simple Copy & Reset Test</h1>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="results"></div>
+    </div>
 
-    <!-- Only include essential scripts -->
     <script src="js/data-models.js"></script>
     <script src="js/storage-manager.js"></script>
     <script src="js/recipe-manager.js"></script>
     <script src="js/barcode-generator.js"></script>
 
     <script>
-        function log(message, type = 'info') {
+        function log(message, isError = false) {
+            const results = document.getElementById('results');
             const div = document.createElement('div');
-            div.className = `test-result ${type}`;
+            div.className = 'test ' + (isError ? 'error' : 'success');
             div.textContent = message;
-            document.getElementById('results').appendChild(div);
+            results.appendChild(div);
         }
 
-        try {
-            log('Starting Simple Copy & Reset Test...', 'info');
+        function runAllTests() {
+            document.getElementById('results').innerHTML = '';
+            
+            try {
+                // Initialize
+                const storage = new StorageManager();
+                const recipeManager = new RecipeManager(storage);
+                const barcodeGenerator = new BarcodeGenerator();
+                log('✓ Components initialized');
 
-            // Test 1: Initialize components
-            const storage = new StorageManager();
-            const recipeManager = new RecipeManager(storage);
-            log('✓ Components initialized successfully', 'success');
+                // Clear data
+                storage.clearAll();
+                log('✓ Storage cleared');
 
-            // Test 2: Clear existing data
-            recipeManager.clearAllRecipes();
-            log('✓ Cleared existing recipes', 'success');
+                // Test 1: Create recipe
+                const recipe = recipeManager.createRecipe('Test Cake', [
+                    { name: 'Flour', weight: 500 },
+                    { name: 'Sugar', weight: 200 }
+                ]);
+                log(`✓ Recipe created: ${recipe.name} (${recipe.totalWeight}g)`);
 
-            // Test 3: Create test recipe
-            const recipe = recipeManager.createRecipe('Test Recipe', [
-                { name: 'Ingredient 1', weight: 100 },
-                { name: 'Ingredient 2', weight: 200 }
-            ]);
-            log(`✓ Recipe created: ${recipe.name} (${recipe.totalWeight}g)`, 'success');
+                // Test 2: Consume some
+                recipeManager.recordConsumption(recipe.id, 300);
+                const consumed = recipeManager.getRecipeById(recipe.id);
+                log(`✓ Consumed 300g, remaining: ${consumed.remainingWeight}g`);
 
-            // Test 4: Consume some of the recipe
-            recipeManager.recordConsumption(recipe.id, 150);
-            const partiallyConsumed = recipeManager.getRecipeById(recipe.id);
-            log(`✓ Consumed 150g, remaining: ${partiallyConsumed.remainingWeight}g`, 'success');
+                // Test 3: Copy recipe
+                const copied = recipeManager.copyRecipe(recipe.id, 'Test Cake Copy');
+                log(`✓ Recipe copied: ${copied.name}, remaining: ${copied.remainingWeight}g`);
 
-            // Test 5: Copy recipe
-            const copiedRecipe = recipeManager.copyRecipe(recipe.id, 'Test Recipe Copy');
-            log(`✓ Recipe copied: ${copiedRecipe.name} (${copiedRecipe.remainingWeight}g remaining)`, 'success');
+                if (copied.remainingWeight === copied.totalWeight) {
+                    log('✓ Copy has full weight (consumption reset)');
+                } else {
+                    log('✗ Copy weight not reset', true);
+                }
 
-            // Test 6: Verify copy has full weight
-            if (copiedRecipe.remainingWeight === copiedRecipe.totalWeight) {
-                log('✓ Copy has full remaining weight (consumption reset)', 'success');
-            } else {
-                log('✗ Copy remaining weight not reset correctly', 'error');
+                // Test 4: Fully consume original
+                recipeManager.markAsFullyConsumed(recipe.id);
+                const fullyConsumed = recipeManager.getRecipeById(recipe.id);
+                log(`✓ Fully consumed: ${fullyConsumed.remainingWeight}g remaining`);
+
+                // Test 5: Reset recipe
+                const reset = recipeManager.resetRecipe(recipe.id);
+                log(`✓ Recipe reset: ${reset.remainingWeight}g remaining`);
+
+                if (reset.remainingWeight === reset.totalWeight && reset.lastConsumed === null) {
+                    log('✓ Reset successful (full weight, no last consumed)');
+                } else {
+                    log('✗ Reset failed', true);
+                }
+
+                // Test 6: Barcode generation
+                const barcode = barcodeGenerator.generateBarcode('TEST123');
+                if (barcode.includes('<svg')) {
+                    log('✓ Barcode generated successfully');
+                } else {
+                    log('✗ Barcode generation failed', true);
+                }
+
+                // Test 7: Check all recipes
+                const allRecipes = recipeManager.getAllRecipes();
+                log(`✓ Total recipes in system: ${allRecipes.length}`);
+
+                log('=== ALL TESTS PASSED ===');
+
+            } catch (error) {
+                log(`✗ Test failed: ${error.message}`, true);
+                console.error(error);
             }
-
-            // Test 7: Fully consume original
-            recipeManager.markAsFullyConsumed(recipe.id);
-            const fullyConsumed = recipeManager.getRecipeById(recipe.id);
-            log(`✓ Original recipe fully consumed: ${fullyConsumed.remainingWeight}g remaining`, 'success');
-
-            // Test 8: Reset original recipe
-            const resetRecipe = recipeManager.resetRecipe(recipe.id);
-            log(`✓ Recipe reset: ${resetRecipe.remainingWeight}g remaining`, 'success');
-
-            // Test 9: Verify reset worked
-            if (resetRecipe.remainingWeight === resetRecipe.totalWeight && resetRecipe.lastConsumed === null) {
-                log('✓ Reset functionality working correctly', 'success');
-            } else {
-                log('✗ Reset functionality not working correctly', 'error');
-            }
-
-            // Test 10: Test barcode generator
-            const barcodeGenerator = new BarcodeGenerator();
-            const barcode = barcodeGenerator.generateBarcode('TEST123');
-            if (barcode && barcode.includes('<svg')) {
-                log('✓ Barcode generator working correctly', 'success');
-            } else {
-                log('✗ Barcode generator not working', 'error');
-            }
-
-            // Test 11: Verify all recipes exist
-            const allRecipes = recipeManager.getAllRecipes();
-            log(`✓ Total recipes in system: ${allRecipes.length}`, 'success');
-
-            log('🎉 All tests completed successfully!', 'success');
-
-        } catch (error) {
-            log(`✗ Test failed: ${error.message}`, 'error');
-            console.error('Full error:', error);
         }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
     </script>
 </body>
 </html>

@@ -78,6 +78,7 @@ class Recipe {
         this.remainingWeight = 0;
         this.createdAt = new Date().toISOString();
         this.lastConsumed = null;
+        this.consumptionHistory = []; // Array of ConsumptionHistory entries
 
         // Add ingredients
         if (Array.isArray(ingredients)) {
@@ -200,6 +201,29 @@ class Recipe {
     }
 
     /**
+     * Calculates proportional ingredient breakdown for a consumed portion
+     * @param {number} consumedWeight - Weight that was consumed
+     * @returns {Array} Array of {name, weight, barcode} for each ingredient
+     */
+    calculateIngredientBreakdown(consumedWeight) {
+        if (typeof consumedWeight !== 'number' || consumedWeight <= 0 || !isFinite(consumedWeight)) {
+            throw new Error('Consumed weight must be a positive finite number');
+        }
+
+        if (this.totalWeight === 0) {
+            return [];
+        }
+
+        // Calculate proportional ingredient weights using formula:
+        // (ingredient_weight / total_recipe_weight) * consumed_portion_weight
+        return this.ingredients.map(ingredient => ({
+            name: ingredient.name,
+            weight: Math.round((ingredient.weight / this.totalWeight) * consumedWeight * 100) / 100,
+            barcode: ingredient.barcode || null
+        }));
+    }
+
+    /**
      * Updates the remaining weight after consumption
      * @param {number} consumedWeight - Weight that was consumed
      */
@@ -217,9 +241,32 @@ class Recipe {
         // Ensure consumed weight doesn't exceed remaining weight due to floating point precision
         const actualConsumedWeight = Math.min(consumedWeight, this.remainingWeight);
 
-        // Update remaining weight with precision handling
-        const newRemainingWeight = this.remainingWeight - actualConsumedWeight;
-        this.remainingWeight = Math.max(0, Math.round(newRemainingWeight * 100) / 100);
+        // Create history entry before updating remaining weight
+        const ConsumptionHistoryClass = window.ConsumptionHistory || 
+            (typeof ConsumptionHistory !== 'undefined' ? ConsumptionHistory : null);
+        
+        if (ConsumptionHistoryClass) {
+            const historyEntry = new ConsumptionHistoryClass(
+                this.id,
+                actualConsumedWeight,
+                this.calculateIngredientBreakdown(actualConsumedWeight),
+                new Date().toISOString()
+            );
+            
+            // Update remaining weight with precision handling
+            const newRemainingWeight = this.remainingWeight - actualConsumedWeight;
+            this.remainingWeight = Math.max(0, Math.round(newRemainingWeight * 100) / 100);
+            
+            // Set remaining weight after consumption
+            historyEntry.remainingWeightAfter = this.remainingWeight;
+            
+            // Add to history
+            this.consumptionHistory.push(historyEntry);
+        } else {
+            // Fallback if ConsumptionHistory class not available
+            const newRemainingWeight = this.remainingWeight - actualConsumedWeight;
+            this.remainingWeight = Math.max(0, Math.round(newRemainingWeight * 100) / 100);
+        }
         
         this.lastConsumed = new Date().toISOString();
     }
@@ -281,6 +328,18 @@ class Recipe {
             recipe.remainingWeight = obj.remainingWeight;
         }
 
+        // Load consumption history if provided
+        if (Array.isArray(obj.consumptionHistory)) {
+            const ConsumptionHistoryClass = window.ConsumptionHistory || 
+                (typeof ConsumptionHistory !== 'undefined' ? ConsumptionHistory : null);
+            
+            if (ConsumptionHistoryClass) {
+                recipe.consumptionHistory = obj.consumptionHistory.map(historyData => 
+                    ConsumptionHistoryClass.fromObject(historyData)
+                );
+            }
+        }
+
         return recipe;
     }
 
@@ -296,7 +355,8 @@ class Recipe {
             totalWeight: this.totalWeight,
             remainingWeight: this.remainingWeight,
             createdAt: this.createdAt,
-            lastConsumed: this.lastConsumed
+            lastConsumed: this.lastConsumed,
+            consumptionHistory: this.consumptionHistory.map(history => history.toObject())
         };
     }
 }
@@ -414,6 +474,124 @@ class Product {
 }
 
 /**
+ * ConsumptionHistory model for tracking individual consumption events
+ * Requirements: Feature 2.1
+ */
+class ConsumptionHistory {
+    constructor(recipeId, consumedWeight, ingredientBreakdown, timestamp = null) {
+        this.id = this._generateId();
+        this.recipeId = recipeId;
+        this.consumedWeight = consumedWeight;
+        this.ingredientBreakdown = ingredientBreakdown || [];
+        this.timestamp = timestamp || new Date().toISOString();
+        this.remainingWeightAfter = 0; // Set by recipe after consumption
+
+        this.validate();
+    }
+
+    /**
+     * Generates a unique ID for the consumption history entry
+     * @returns {string} Unique identifier
+     */
+    _generateId() {
+        return 'history_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+    }
+
+    /**
+     * Validates the consumption history data
+     */
+    validate() {
+        if (!this.recipeId || typeof this.recipeId !== 'string') {
+            throw new Error('Recipe ID must be a non-empty string');
+        }
+
+        if (typeof this.consumedWeight !== 'number' || this.consumedWeight <= 0 || !isFinite(this.consumedWeight)) {
+            throw new Error('Consumed weight must be a positive finite number');
+        }
+
+        if (!Array.isArray(this.ingredientBreakdown)) {
+            throw new Error('Ingredient breakdown must be an array');
+        }
+
+        // Validate each ingredient in breakdown
+        this.ingredientBreakdown.forEach((ingredient, index) => {
+            if (!ingredient || typeof ingredient !== 'object') {
+                throw new Error(`Ingredient at index ${index} must be an object`);
+            }
+
+            if (!ingredient.name || typeof ingredient.name !== 'string') {
+                throw new Error(`Ingredient at index ${index} must have a valid name`);
+            }
+
+            if (typeof ingredient.weight !== 'number' || ingredient.weight < 0 || !isFinite(ingredient.weight)) {
+                throw new Error(`Ingredient at index ${index} must have a valid weight`);
+            }
+
+            if (ingredient.barcode !== null && ingredient.barcode !== undefined && 
+                (typeof ingredient.barcode !== 'string' || ingredient.barcode.trim().length === 0)) {
+                throw new Error(`Ingredient at index ${index} must have a valid barcode or null`);
+            }
+        });
+
+        if (typeof this.remainingWeightAfter !== 'number' || this.remainingWeightAfter < 0 || !isFinite(this.remainingWeightAfter)) {
+            throw new Error('Remaining weight after must be a non-negative finite number');
+        }
+
+        // Round consumed weight to 2 decimal places
+        this.consumedWeight = Math.round(this.consumedWeight * 100) / 100;
+        this.remainingWeightAfter = Math.round(this.remainingWeightAfter * 100) / 100;
+
+        // Round ingredient weights
+        this.ingredientBreakdown = this.ingredientBreakdown.map(ing => ({
+            ...ing,
+            weight: Math.round(ing.weight * 100) / 100
+        }));
+    }
+
+    /**
+     * Creates a ConsumptionHistory from a plain object
+     * @param {Object} obj - Plain object with consumption history data
+     * @returns {ConsumptionHistory} New ConsumptionHistory instance
+     */
+    static fromObject(obj) {
+        if (!obj || typeof obj !== 'object') {
+            throw new Error('Invalid consumption history object');
+        }
+
+        const history = new ConsumptionHistory(
+            obj.recipeId,
+            obj.consumedWeight,
+            obj.ingredientBreakdown || [],
+            obj.timestamp
+        );
+
+        // Set additional properties
+        if (obj.id) history.id = obj.id;
+        if (typeof obj.remainingWeightAfter === 'number') {
+            history.remainingWeightAfter = obj.remainingWeightAfter;
+        }
+
+        history.validate();
+        return history;
+    }
+
+    /**
+     * Converts consumption history to plain object for serialization
+     * @returns {Object} Plain object representation
+     */
+    toObject() {
+        return {
+            id: this.id,
+            recipeId: this.recipeId,
+            consumedWeight: this.consumedWeight,
+            ingredientBreakdown: this.ingredientBreakdown,
+            timestamp: this.timestamp,
+            remainingWeightAfter: this.remainingWeightAfter
+        };
+    }
+}
+
+/**
  * Consumption Result model for tracking what was consumed
  */
 class ConsumptionResult {
@@ -478,11 +656,12 @@ class ConsumptionResult {
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Ingredient, Recipe, Product, ConsumptionResult };
+    module.exports = { Ingredient, Recipe, Product, ConsumptionHistory, ConsumptionResult };
 } else if (typeof window !== 'undefined') {
     // Browser environment - expose classes to global scope
     window.Ingredient = Ingredient;
     window.Recipe = Recipe;
     window.Product = Product;
+    window.ConsumptionHistory = ConsumptionHistory;
     window.ConsumptionResult = ConsumptionResult;
 }

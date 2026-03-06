@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumption History Test</title>
+</head>
+<body>
+    <h1>Consumption History Test</h1>
+    <div id="output"></div>
+
+    <script src="js/data-models.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, isError = false) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.style.color = isError ? 'red' : 'green';
+            output.appendChild(p);
+        }
+
+        try {
+            // Test 1: Create ConsumptionHistory instance
+            log('Test 1: Creating ConsumptionHistory instance...');
+            const history = new ConsumptionHistory(
+                'recipe_123',
+                100,
+                [
+                    { name: 'Flour', weight: 50, barcode: '123' },
+                    { name: 'Sugar', weight: 30, barcode: null },
+                    { name: 'Butter', weight: 20, barcode: '456' }
+                ]
+            );
+            history.remainingWeightAfter = 150;
+            log(`✓ ConsumptionHistory created with ID: ${history.id}`);
+
+            // Test 2: Serialize and deserialize ConsumptionHistory
+            log('Test 2: Testing ConsumptionHistory serialization...');
+            const historyObj = history.toObject();
+            const historyFromObj = ConsumptionHistory.fromObject(historyObj);
+            log(`✓ Serialization works. Consumed weight: ${historyFromObj.consumedWeight}g`);
+
+            // Test 3: Create Recipe with consumption
+            log('Test 3: Creating Recipe and testing consumption...');
+            const recipe = new Recipe('Test Recipe', [
+                { name: 'Flour', weight: 500, barcode: '123' },
+                { name: 'Sugar', weight: 300, barcode: null },
+                { name: 'Butter', weight: 200, barcode: '456' }
+            ]);
+            log(`✓ Recipe created. Total weight: ${recipe.totalWeight}g`);
+
+            // Test 4: Test calculateIngredientBreakdown
+            log('Test 4: Testing ingredient breakdown calculation...');
+            const breakdown = recipe.calculateIngredientBreakdown(100);
+            log(`✓ Breakdown for 100g: ${breakdown.map(i => `${i.name}: ${i.weight}g`).join(', ')}`);
+
+            // Test 5: Consume and create history
+            log('Test 5: Testing consumption with history creation...');
+            recipe.consume(100);
+            log(`✓ Consumed 100g. Remaining: ${recipe.remainingWeight}g`);
+            log(`✓ History entries: ${recipe.consumptionHistory.length}`);
+            
+            if (recipe.consumptionHistory.length > 0) {
+                const entry = recipe.consumptionHistory[0];
+                log(`✓ History entry: ${entry.consumedWeight}g consumed, ${entry.remainingWeightAfter}g remaining`);
+                log(`✓ Ingredient breakdown: ${entry.ingredientBreakdown.map(i => `${i.name}: ${i.weight}g`).join(', ')}`);
+            }
+
+            // Test 6: Multiple consumptions
+            log('Test 6: Testing multiple consumptions...');
+            recipe.consume(50);
+            recipe.consume(75);
+            log(`✓ After 3 consumptions, history has ${recipe.consumptionHistory.length} entries`);
+            log(`✓ Remaining weight: ${recipe.remainingWeight}g`);
+
+            // Test 7: Recipe serialization with history
+            log('Test 7: Testing Recipe serialization with history...');
+            const recipeObj = recipe.toObject();
+            log(`✓ Recipe serialized with ${recipeObj.consumptionHistory.length} history entries`);
+            
+            const recipeFromObj = Recipe.fromObject(recipeObj);
+            log(`✓ Recipe deserialized with ${recipeFromObj.consumptionHistory.length} history entries`);
+            log(`✓ Remaining weight preserved: ${recipeFromObj.remainingWeight}g`);
+
+            // Test 8: RecipeManager integration
+            log('Test 8: Testing RecipeManager with history...');
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing recipes
+            manager.clearAllRecipes();
+            
+            // Create recipe through manager
+            const managedRecipe = manager.createRecipe('Managed Recipe', [
+                { name: 'Ingredient A', weight: 200, barcode: null },
+                { name: 'Ingredient B', weight: 100, barcode: null }
+            ]);
+            log(`✓ Recipe created through manager: ${managedRecipe.name}`);
+            
+            // Record consumption
+            manager.recordConsumption(managedRecipe.id, 50);
+            manager.recordConsumption(managedRecipe.id, 30);
+            log(`✓ Recorded 2 consumptions through manager`);
+            
+            // Get consumption history
+            const historyFromManager = manager.getConsumptionHistory(managedRecipe.id);
+            log(`✓ Retrieved ${historyFromManager.length} history entries from manager`);
+            
+            // Verify persistence
+            const reloadedRecipe = manager.getRecipeById(managedRecipe.id);
+            log(`✓ History persisted: ${reloadedRecipe.consumptionHistory.length} entries after reload`);
+
+            log('');
+            log('=== ALL TESTS PASSED ===');
+
+        } catch (error) {
+            log(`✗ Test failed: ${error.message}`, true);
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

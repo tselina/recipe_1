@@ -331,6 +331,30 @@ class RecipeManager {
     }
 
     /**
+     * Gets consumption history for a specific recipe
+     * @param {string} recipeId - ID of recipe to get history for
+     * @returns {Array} Array of ConsumptionHistory entries
+     * @throws {Error} If recipe not found
+     */
+    getConsumptionHistory(recipeId) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            const recipe = this.getRecipeById(recipeId);
+            if (!recipe) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            return recipe.consumptionHistory || [];
+            
+        } catch (error) {
+            throw new Error(`Failed to get consumption history: ${error.message}`);
+        }
+    }
+
+    /**
      * Loads recipes from storage
      * @returns {Recipe[]} Array of Recipe instances
      * @private

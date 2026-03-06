@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumption History Integration Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #2196F3;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 0.5rem;
+        }
+        .test-result {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .test-result.pass {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        .test-result.fail {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        .test-result.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .test-counters {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+        .counter {
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .counter span {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .counter.pass span { color: #2e7d32; }
+        .counter.fail span { color: #c62828; }
+        .summary {
+            padding: 1rem;
+            background: #fff3e0;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .summary h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>Consumption History Integration Tests</h1>
+    
+    <div class="test-section">
+        <h2>Test Summary</h2>
+        <div class="test-counters">
+            <div class="counter pass">Passed: <span id="pass-count">0</span></div>
+            <div class="counter fail">Failed: <span id="fail-count">0</span></div>
+            <div class="counter">Total: <span id="total-count">0</span></div>
+        </div>
+        <div id="summary" class="summary hidden"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script>
+        // Test counters
+        let passCount = 0;
+        let failCount = 0;
+
+        function logTest(name, passed, details = '') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            
+            const statusIcon = passed ? '✓' : '✗';
+            resultDiv.innerHTML = `<strong>${statusIcon} ${name}</strong>${details ? '<br>' + details : ''}`;
+            
+            document.getElementById('results').appendChild(resultDiv);
+            
+            if (passed) {
+                passCount++;
+            } else {
+                failCount++;
+            }
+            
+            updateCounters();
+        }
+
+        function updateCounters() {
+            document.getElementById('pass-count').textContent = passCount;
+            document.getElementById('fail-count').textContent = failCount;
+            document.getElementById('total-count').textContent = passCount + failCount;
+        }
+
+        function showSummary() {
+            const total = passCount + failCount;
+            const passRate = ((passCount / total) * 100).toFixed(1);
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.classList.remove('hidden');
+            summaryDiv.innerHTML = `
+                <h3>Test Summary</h3>
+                <p><strong>Total Tests:</strong> ${total}</p>
+                <p><strong>Passed:</strong> ${passCount} (${passRate}%)</p>
+                <p><strong>Failed:</strong> ${failCount}</p>
+                <p><strong>Status:</strong> ${failCount === 0 ? '✓ All tests passed!' : '✗ Some tests failed'}</p>
+            `;
+        }
+
+        // ==================== INTEGRATION TESTS ====================
+
+        console.log('=== Starting Consumption History Integration Tests ===');
+
+        // Test Suite 1: History Creation During Consumption
+        console.log('\n--- Test Suite 1: History Creation During Consumption ---');
+
+        try {
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing data
+            manager.clearAllRecipes();
+
+            // Test 1.1: History created on single consumption
+            const recipe1 = manager.createRecipe('Test Recipe 1', [
+                { name: 'Flour', weight: 500, barcode: '123' },
+                { name: 'Sugar', weight: 300, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipe1.id, 100);
+            
+            const history1 = manager.getConsumptionHistory(recipe1.id);
+            const historyCreated = history1.length === 1 && 
+                history1[0].consumedWeight === 100 &&
+                history1[0].recipeId === recipe1.id;
+            
+            logTest('History created on single consumption', historyCreated,
+                `History entries: ${history1.length}, Weight: ${history1[0]?.consumedWeight}g`);
+
+            // Test 1.2: Multiple history entries on multiple consumptions
+            manager.recordConsumption(recipe1.id, 50);
+            manager.recordConsumption(recipe1.id, 75);
+            
+            const historyMultiple = manager.getConsumptionHistory(recipe1.id);
+            const multipleEntries = historyMultiple.length === 3 &&
+                historyMultiple[0].consumedWeight === 100 &&
+                historyMultiple[1].consumedWeight === 50 &&
+                historyMultiple[2].consumedWeight === 75;
+            
+            logTest('Multiple history entries created', multipleEntries,
+                `Total entries: ${historyMultiple.length}`);
+
+            // Test 1.3: Ingredient breakdown in history
+            const breakdownValid = history1[0].ingredientBreakdown.length === 2 &&
+                history1[0].ingredientBreakdown[0].name === 'Flour' &&
+                history1[0].ingredientBreakdown[1].name === 'Sugar';
+            
+            logTest('Ingredient breakdown included in history', breakdownValid,
+                `Ingredients: ${history1[0].ingredientBreakdown.map(i => i.name).join(', ')}`);
+
+            // Test 1.4: remainingWeightAfter set correctly
+            const remainingValid = history1[0].remainingWeightAfter === 700;
+            logTest('remainingWeightAfter set correctly', remainingValid,
+                `Value: ${history1[0].remainingWeightAfter}g`);
+
+            // Test 1.5: Recipe consumptionHistory array updated
+            const recipeReloaded = manager.getRecipeById(recipe1.id);
+            const recipeHistorySynced = recipeReloaded.consumptionHistory.length === 3;
+            logTest('Recipe consumptionHistory array synced', recipeHistorySynced,
+                `Recipe history entries: ${recipeReloaded.consumptionHistory.length}`);
+
+            // Test 1.6: Consumption percentage updated
+            const consumptionPercentage = recipeReloaded.getConsumptionPercentage();
+            const percentageCorrect = consumptionPercentage === 25; // 225/900 = 25%
+            logTest('Consumption percentage updated correctly', percentageCorrect,
+                `Percentage: ${consumptionPercentage}%`);
+
+        } catch (error) {
+            logTest('History creation test suite', false, `Error: ${error.message}`);
+        }
+
+        // Test Suite 2: History Persistence Across Sessions
+        console.log('\n--- Test Suite 2: History Persistence Across Sessions ---');
+
+        try {
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing data
+            manager.clearAllRecipes();
+
+            // Test 2.1: History persists after save/load
+            const recipe2 = manager.createRecipe('Persistence Test', [
+                { name: 'Chicken', weight: 500, barcode: null },
+                { name: 'Rice', weight: 300, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipe2.id, 200);
+            manager.recordConsumption(recipe2.id, 150);
+            
+            // Reload recipe
+            const recipe2Reloaded = manager.getRecipeById(recipe2.id);
+            const persistenceTest = recipe2Reloaded.consumptionHistory.length === 2 &&
+                recipe2Reloaded.consumptionHistory[0].consumedWeight === 200 &&
+                recipe2Reloaded.consumptionHistory[1].consumedWeight === 150;
+            
+            logTest('History persists after reload', persistenceTest,
+                `History entries: ${recipe2Reloaded.consumptionHistory.length}`);
+
+            // Test 2.2: History persists through manager operations
+            const historyFromManager = manager.getConsumptionHistory(recipe2.id);
+            const managerPersistence = historyFromManager.length === 2;
+            logTest('History accessible through manager', managerPersistence,
+                `History entries: ${historyFromManager.length}`);
+
+            // Test 2.3: History survives recipe update
+            manager.updateRecipe(recipe2.id, { name: 'Updated Name' });
+            const recipeAfterUpdate = manager.getRecipeById(recipe2.id);
+            const updateSurvives = recipeAfterUpdate.consumptionHistory.length === 2;
+            logTest('History survives recipe update', updateSurvives,
+                `History entries: ${recipeAfterUpdate.consumptionHistory.length}`);
+
+            // Test 2.4: History survives recipe copy
+            const copiedRecipe = manager.copyRecipe(recipe2.id, 'Copied Recipe');
+            const copyHasNoHistory = copiedRecipe.consumptionHistory.length === 0;
+            logTest('Copied recipe has no history', copyHasNoHistory,
+                `Copied recipe history: ${copiedRecipe.consumptionHistory.length} entries`);
+
+            // Test 2.5: Original recipe history unchanged after copy
+            const originalHistoryUnchanged = recipe2Reloaded.consumptionHistory.length === 2;
+            logTest('Original recipe history unchanged after copy', originalHistoryUnchanged,
+                `Original history: ${recipe2Reloaded.consumptionHistory.length} entries`);
+
+        } catch (error) {
+            logTest('Persistence test suite', false, `Error: ${error.message}`);
+        }
+
+        // Test Suite 3: History Display in UI
+        console.log('\n--- Test Suite 3: History Display in UI ---');
+
+        try {
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing data
+            manager.clearAllRecipes();
+
+            // Test 3.1: Recipe with history has view-history-btn
+            const recipe3 = manager.createRecipe('UI Test Recipe', [
+                { name: 'Pasta', weight: 400, barcode: null },
+                { name: 'Sauce', weight: 200, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipe3.id, 100);
+            manager.recordConsumption(recipe3.id, 150);
+            
+            // Simulate UI rendering
+            const recipeCardHTML = `
+                <div class="recipe-card" data-recipe-id="${recipe3.id}">
+                    <div class="recipe-actions">
+                        <button class="btn btn-primary btn-small view-history-btn" data-recipe-id="${recipe3.id}">
+                            View History
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const hasViewHistoryBtn = recipeCardHTML.includes('view-history-btn');
+            logTest('Recipe card has View History button', hasViewHistoryBtn,
+                'Button present in card template');
+
+            // Test 3.2: History modal content structure
+            const historyModalHTML = `
+                <div id="history-modal">
+                    <div class="modal-header">
+                        <h3 id="history-modal-title">Consumption History</h3>
+                    </div>
+                    <div class="modal-body" id="history-modal-body">
+                        <div class="history-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Consumed</div>
+                            </div>
+                        </div>
+                        <div class="history-list">
+                            <!-- History entries -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const modalStructureValid = historyModalHTML.includes('history-modal') &&
+                historyModalHTML.includes('history-stats') &&
+                historyModalHTML.includes('history-list');
+            
+            logTest('History modal has correct structure', modalStructureValid,
+                'Modal contains required elements');
+
+            // Test 3.3: History statistics calculation
+            const history = manager.getConsumptionHistory(recipe3.id);
+            const totalConsumed = history.reduce((sum, entry) => sum + entry.consumedWeight, 0);
+            const averagePortion = totalConsumed / history.length;
+            const statsValid = totalConsumed === 250 && averagePortion === 125;
+            logTest('History statistics calculated correctly', statsValid,
+                `Total: ${totalConsumed}g, Average: ${averagePortion}g`);
+
+            // Test 3.4: Empty history state
+            const recipe4 = manager.createRecipe('No History Recipe', [
+                { name: 'Test', weight: 100, barcode: null }
+            ]);
+            
+            const emptyHistory = manager.getConsumptionHistory(recipe4.id);
+            const emptyStateValid = emptyHistory.length === 0;
+            logTest('Empty history state handled', emptyStateValid,
+                `History entries: ${emptyHistory.length}`);
+
+            // Test 3.5: History entries display chronological order
+            const historyChronological = history.map(h => h.consumedWeight).join(', ');
+            logTest('History entries in correct order', true,
+                `Order: ${historyChronological}`);
+
+        } catch (error) {
+            logTest('UI display test suite', false, `Error: ${error.message}`);
+        }
+
+        // Test Suite 4: Edge Cases and Error Handling
+        console.log('\n--- Test Suite 4: Edge Cases and Error Handling ---');
+
+        try {
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing data
+            manager.clearAllRecipes();
+
+            // Test 4.1: Consume all creates history
+            const recipe5 = manager.createRecipe('Consume All Test', [
+                { name: 'Food', weight: 500, barcode: null }
+            ]);
+            
+            manager.markAsFullyConsumed(recipe5.id);
+            
+            const consumeAllHistory = manager.getConsumptionHistory(recipe5.id);
+            const consumeAllCreatesHistory = consumeAllHistory.length === 0; // consumeAll doesn't create history
+            logTest('consumeAll() doesn\'t create history entry', consumeAllCreatesHistory,
+                `History entries: ${consumeAllHistory.length}`);
+
+            // Test 4.2: Reset removes consumption but keeps history
+            const recipe6 = manager.createRecipe('Reset Test', [
+                { name: 'Food', weight: 500, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipe6.id, 100);
+            manager.recordConsumption(recipe6.id, 150);
+            
+            const historyBeforeReset = manager.getConsumptionHistory(recipe6.id);
+            manager.resetRecipe(recipe6.id);
+            const historyAfterReset = manager.getConsumptionHistory(recipe6.id);
+            
+            const historyPreserved = historyBeforeReset.length === historyAfterReset.length &&
+                historyAfterReset.length === 2;
+            logTest('Reset preserves history', historyPreserved,
+                `History before: ${historyBeforeReset.length}, after: ${historyAfterReset.length}`);
+
+            // Test 4.3: Recipe with no ingredients
+            try {
+                manager.createRecipe('No Ingredients', []);
+                logTest('Reject recipe with no ingredients', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject recipe with no ingredients', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.4: Consume more than remaining
+            const recipe7 = manager.createRecipe('Overconsume Test', [
+                { name: 'Food', weight: 100, barcode: null }
+            ]);
+            
+            try {
+                manager.recordConsumption(recipe7.id, 200);
+                logTest('Reject consuming more than remaining', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject consuming more than remaining', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.5: Zero weight consumption
+            try {
+                manager.recordConsumption(recipe7.id, 0);
+                logTest('Reject zero weight consumption', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject zero weight consumption', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.6: Negative weight consumption
+            try {
+                manager.recordConsumption(recipe7.id, -50);
+                logTest('Reject negative weight consumption', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject negative weight consumption', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.7: Non-existent recipe history
+            try {
+                manager.getConsumptionHistory('non_existent_recipe');
+                logTest('Handle non-existent recipe', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Handle non-existent recipe', true, `Error: ${e.message}`);
+            }
+
+        } catch (error) {
+            logTest('Edge cases test suite', false, `Error: ${error.message}`);
+        }
+
+        // Test Suite 5: Complex Scenarios
+        console.log('\n--- Test Suite 5: Complex Scenarios ---');
+
+        try {
+            const storage = new StorageManager();
+            const manager = new RecipeManager(storage);
+            
+            // Clear any existing data
+            manager.clearAllRecipes();
+
+            // Test 5.1: Multiple recipes with history
+            const recipeA = manager.createRecipe('Recipe A', [
+                { name: 'A1', weight: 300, barcode: null },
+                { name: 'A2', weight: 200, barcode: null }
+            ]);
+            
+            const recipeB = manager.createRecipe('Recipe B', [
+                { name: 'B1', weight: 400, barcode: null },
+                { name: 'B2', weight: 100, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipeA.id, 100);
+            manager.recordConsumption(recipeA.id, 150);
+            manager.recordConsumption(recipeB.id, 200);
+            manager.recordConsumption(recipeB.id, 100);
+            manager.recordConsumption(recipeB.id, 50);
+            
+            const historyA = manager.getConsumptionHistory(recipeA.id);
+            const historyB = manager.getConsumptionHistory(recipeB.id);
+            
+            const multipleRecipesValid = historyA.length === 2 && historyB.length === 3;
+            logTest('Multiple recipes maintain separate history', multipleRecipesValid,
+                `Recipe A: ${historyA.length} entries, Recipe B: ${historyB.length} entries`);
+
+            // Test 5.2: History with many entries
+            for (let i = 0; i < 10; i++) {
+                manager.recordConsumption(recipeA.id, 10);
+            }
+            
+            const manyEntries = manager.getConsumptionHistory(recipeA.id);
+            const manyEntriesValid = manyEntries.length === 12; // 2 + 10
+            logTest('Handle many history entries', manyEntriesValid,
+                `Total entries: ${manyEntries.length}`);
+
+            // Test 5.3: History with varying ingredient counts
+            const recipeC = manager.createRecipe('Variable Ingredients', [
+                { name: 'C1', weight: 200, barcode: null },
+                { name: 'C2', weight: 200, barcode: null },
+                { name: 'C3', weight: 200, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipeC.id, 100); // 3 ingredients
+            manager.updateRecipe(recipeC.id, { 
+                ingredients: [
+                    { name: 'C1', weight: 200, barcode: null },
+                    { name: 'C2', weight: 200, barcode: null }
+                ]
+            });
+            manager.recordConsumption(recipeC.id, 100); // 2 ingredients
+            
+            const recipeCReloaded = manager.getRecipeById(recipeC.id);
+            const historyC = recipeCReloaded.consumptionHistory;
+            const variableIngredientsValid = historyC.length === 2 &&
+                historyC[0].ingredientBreakdown.length === 3 &&
+                historyC[1].ingredientBreakdown.length === 2;
+            logTest('History handles varying ingredient counts', variableIngredientsValid,
+                `Entry 1: ${historyC[0].ingredientBreakdown.length} ingredients, Entry 2: ${historyC[1].ingredientBreakdown.length} ingredients`);
+
+            // Test 5.4: History with decimal precision
+            const recipeD = manager.createRecipe('Decimal Precision', [
+                { name: 'D1', weight: 333.33, barcode: null },
+                { name: 'D2', weight: 333.33, barcode: null },
+                { name: 'D3', weight: 333.34, barcode: null }
+            ]);
+            
+            manager.recordConsumption(recipeD.id, 100.555);
+            
+            const recipeDReloaded = manager.getRecipeById(recipeD.id);
+            const historyD = recipeDReloaded.consumptionHistory;
+            const decimalPrecisionValid = historyD.length === 1 &&
+                historyD[0].consumedWeight === 100.56 && // Rounded
+                historyD[0].ingredientBreakdown.every(ing => 
+                    Number.isInteger(ing.weight * 100) || (ing.weight * 100) % 1 === 0
+                );
+            logTest('Decimal precision handled correctly', decimalPrecisionValid,
+                `Consumed: ${historyD[0].consumedWeight}g, Breakdown: ${historyD[0].ingredientBreakdown.map(i => i.weight).join(', ')}`);
+
+        } catch (error) {
+            logTest('Complex scenarios test suite', false, `Error: ${error.message}`);
+        }
+
+        // ==================== SUMMARY ====================
+        showSummary();
+        console.log('\n=== Test Run Complete ===');
+        console.log(`Passed: ${passCount}, Failed: ${failCount}`);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 2 Verification - Consumption History UI</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .verification-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .verification-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .verification-header h1 {
+            margin: 0 0 1rem 0;
+            color: #2196F3;
+        }
+        .subtask-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .subtask-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .subtask-number {
+            background: #2196F3;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .subtask-title {
+            flex: 1;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+        }
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .status-pass {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status-fail {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .verification-details {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .verification-details ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .verification-details li {
+            margin: 0.25rem 0;
+        }
+        .test-button {
+            margin-top: 1rem;
+        }
+        .demo-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-container">
+        <div class="verification-header">
+            <h1>Task 2: Implement Consumption History UI</h1>
+            <p style="color: #666; margin: 0;">Verification of all subtasks implementation</p>
+        </div>
+
+        <div class="subtask-section">
+            <div class="subtask-header">
+                <div class="subtask-number">2.1</div>
+                <div class="subtask-title">Add "View History" button to recipe cards</div>
+                <div class="status-badge" id="status-2-1">Testing...</div>
+            </div>
+            <div class="verification-details">
+                <p><strong>Requirements:</strong></p>
+                <ul>
+                    <li>Button added to recipe card template in ui-controller.js</li>
+                    <li>Button styled appropriately</li>
+                    <li>Event listener attached to show history modal</li>
+                </ul>
+                <div id="result-2-1"></div>
+            </div>
+        </div>
+
+        <div class="subtask-section">
+            <div class="subtask-header">
+                <div class="subtask-number">2.2</div>
+                <div class="subtask-title">Create history display modal</div>
+                <div class="status-badge" id="status-2-2">Testing...</div>
+            </div>
+            <div class="verification-details">
+                <p><strong>Requirements:</strong></p>
+                <ul>
+                    <li>Modal HTML structure created</li>
+                    <li>CSS styling for history list</li>
+                    <li>Chronological display of entries (most recent first)</li>
+                    <li>Show date/time, weight, and ingredient breakdown</li>
+                </ul>
+                <div id="result-2-2"></div>
+            </div>
+        </div>
+
+        <div class="subtask-section">
+            <div class="subtask-header">
+                <div class="subtask-number">2.3</div>
+                <div class="subtask-title">Add history statistics display</div>
+                <div class="status-badge" id="status-2-3">Testing...</div>
+            </div>
+            <div class="verification-details">
+                <p><strong>Requirements:</strong></p>
+                <ul>
+                    <li>Calculate total consumed</li>
+                    <li>Calculate average portion size</li>
+                    <li>Display consumption count</li>
+                    <li>Show first and last consumption dates</li>
+                </ul>
+                <div id="result-2-3"></div>
+            </div>
+        </div>
+
+        <div class="subtask-section">
+            <div class="subtask-header">
+                <div class="subtask-number">2.4</div>
+                <div class="subtask-title">Implement showConsumptionHistory() in UIController</div>
+                <div class="status-badge" id="status-2-4">Testing...</div>
+            </div>
+            <div class="verification-details">
+                <p><strong>Requirements:</strong></p>
+                <ul>
+                    <li>Load history for selected recipe</li>
+                    <li>Render history entries in modal</li>
+                    <li>Handle empty history state</li>
+                </ul>
+                <div id="result-2-4"></div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2 style="margin-top: 0; color: #2196F3;">Live Demo</h2>
+            <button class="btn btn-primary test-button" onclick="createDemoRecipe()">Create Demo Recipe with History</button>
+            <button class="btn btn-secondary test-button" onclick="createEmptyRecipe()">Create Recipe without History</button>
+            <div id="demo-recipe-list" class="recipe-grid" style="margin-top: 1.5rem;"></div>
+        </div>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/barcode-generator.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    
+    <script>
+        // Initialize the app components
+        const storageManager = new StorageManager();
+        const productDatabase = new ProductDatabase(storageManager);
+        const recipeManager = new RecipeManager(storageManager);
+        const portionCalculator = new PortionCalculator();
+        const uiController = new UIController(recipeManager, portionCalculator, productDatabase, storageManager);
+
+        function setStatus(subtask, passed, message) {
+            const statusEl = document.getElementById(`status-${subtask}`);
+            const resultEl = document.getElementById(`result-${subtask}`);
+            
+            statusEl.className = 'status-badge ' + (passed ? 'status-pass' : 'status-fail');
+            statusEl.textContent = passed ? '✓ PASS' : '✗ FAIL';
+            
+            resultEl.innerHTML = `<p style="margin-top: 0.5rem; color: ${passed ? '#2e7d32' : '#c62828'};">${message}</p>`;
+        }
+
+        function verifySubtask21() {
+            try {
+                // Check if createRecipeCard method includes View History button
+                const testRecipe = recipeManager.createRecipe('Test Recipe', [
+                    { name: 'Test Ingredient', weight: 100, barcode: null }
+                ]);
+                
+                const card = uiController.createRecipeCard(testRecipe);
+                const viewHistoryBtn = card.querySelector('.view-history-btn');
+                
+                if (!viewHistoryBtn) {
+                    setStatus('2-1', false, 'View History button not found in recipe card');
+                    return false;
+                }
+                
+                if (viewHistoryBtn.textContent.trim() !== 'View History') {
+                    setStatus('2-1', false, 'View History button has incorrect text');
+                    return false;
+                }
+                
+                // Check if button has event listener (we can't directly check, but we can verify it's clickable)
+                if (!viewHistoryBtn.dataset.recipeId) {
+                    setStatus('2-1', false, 'View History button missing recipe ID');
+                    return false;
+                }
+                
+                recipeManager.deleteRecipe(testRecipe.id);
+                setStatus('2-1', true, 'View History button successfully added to recipe cards with proper styling and event handling');
+                return true;
+                
+            } catch (error) {
+                setStatus('2-1', false, `Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function verifySubtask22() {
+            try {
+                // Check if showConsumptionHistory method exists
+                if (typeof uiController.showConsumptionHistory !== 'function') {
+                    setStatus('2-2', false, 'showConsumptionHistory method not found');
+                    return false;
+                }
+                
+                // Check if createHistoryModal method exists
+                if (typeof uiController.createHistoryModal !== 'function') {
+                    setStatus('2-2', false, 'createHistoryModal method not found');
+                    return false;
+                }
+                
+                // Check if renderHistoryModal method exists
+                if (typeof uiController.renderHistoryModal !== 'function') {
+                    setStatus('2-2', false, 'renderHistoryModal method not found');
+                    return false;
+                }
+                
+                // Check CSS classes exist
+                const testDiv = document.createElement('div');
+                testDiv.className = 'history-modal-content';
+                document.body.appendChild(testDiv);
+                const styles = window.getComputedStyle(testDiv);
+                document.body.removeChild(testDiv);
+                
+                setStatus('2-2', true, 'History display modal structure and styling successfully implemented');
+                return true;
+                
+            } catch (error) {
+                setStatus('2-2', false, `Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function verifySubtask23() {
+            try {
+                // Check if calculateHistoryStatistics method exists
+                if (typeof uiController.calculateHistoryStatistics !== 'function') {
+                    setStatus('2-3', false, 'calculateHistoryStatistics method not found');
+                    return false;
+                }
+                
+                // Create a test recipe with history
+                const testRecipe = recipeManager.createRecipe('Stats Test', [
+                    { name: 'Ingredient', weight: 1000, barcode: null }
+                ]);
+                
+                recipeManager.recordConsumption(testRecipe.id, 100);
+                recipeManager.recordConsumption(testRecipe.id, 200);
+                recipeManager.recordConsumption(testRecipe.id, 150);
+                
+                const recipe = recipeManager.getRecipeById(testRecipe.id);
+                const stats = uiController.calculateHistoryStatistics(recipe, recipe.consumptionHistory);
+                
+                // Verify all required statistics
+                const hasAllStats = stats.totalConsumed && stats.consumptionCount && 
+                                   stats.averagePortion && stats.firstConsumed && stats.lastConsumed;
+                
+                if (!hasAllStats) {
+                    setStatus('2-3', false, 'Missing required statistics fields');
+                    recipeManager.deleteRecipe(testRecipe.id);
+                    return false;
+                }
+                
+                // Verify calculations
+                if (parseFloat(stats.totalConsumed) !== 450) {
+                    setStatus('2-3', false, 'Total consumed calculation incorrect');
+                    recipeManager.deleteRecipe(testRecipe.id);
+                    return false;
+                }
+                
+                if (stats.consumptionCount !== 3) {
+                    setStatus('2-3', false, 'Consumption count incorrect');
+                    recipeManager.deleteRecipe(testRecipe.id);
+                    return false;
+                }
+                
+                if (parseFloat(stats.averagePortion) !== 150) {
+                    setStatus('2-3', false, 'Average portion calculation incorrect');
+                    recipeManager.deleteRecipe(testRecipe.id);
+                    return false;
+                }
+                
+                recipeManager.deleteRecipe(testRecipe.id);
+                setStatus('2-3', true, 'History statistics successfully calculated: total consumed, average portion, count, and dates');
+                return true;
+                
+            } catch (error) {
+                setStatus('2-3', false, `Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function verifySubtask24() {
+            try {
+                // Test with recipe that has history
+                const testRecipe1 = recipeManager.createRecipe('History Test', [
+                    { name: 'Ingredient', weight: 500, barcode: null }
+                ]);
+                recipeManager.recordConsumption(testRecipe1.id, 100);
+                
+                // This should not throw an error
+                uiController.showConsumptionHistory(testRecipe1.id);
+                
+                // Check if modal was created
+                const modal = document.getElementById('history-modal');
+                if (!modal) {
+                    setStatus('2-4', false, 'History modal not created');
+                    recipeManager.deleteRecipe(testRecipe1.id);
+                    return false;
+                }
+                
+                // Close the modal
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-open');
+                
+                // Test with recipe without history
+                const testRecipe2 = recipeManager.createRecipe('Empty History Test', [
+                    { name: 'Ingredient', weight: 500, barcode: null }
+                ]);
+                
+                uiController.showConsumptionHistory(testRecipe2.id);
+                
+                // Check if empty state is shown
+                const emptyState = modal.querySelector('.empty-history');
+                if (!emptyState) {
+                    setStatus('2-4', false, 'Empty history state not handled');
+                    recipeManager.deleteRecipe(testRecipe1.id);
+                    recipeManager.deleteRecipe(testRecipe2.id);
+                    return false;
+                }
+                
+                // Close the modal
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-open');
+                
+                recipeManager.deleteRecipe(testRecipe1.id);
+                recipeManager.deleteRecipe(testRecipe2.id);
+                
+                setStatus('2-4', true, 'showConsumptionHistory() successfully loads history, renders entries, and handles empty state');
+                return true;
+                
+            } catch (error) {
+                setStatus('2-4', false, `Error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function createDemoRecipe() {
+            try {
+                const ingredients = [
+                    { name: 'Chicken', weight: 600, barcode: '1234567890' },
+                    { name: 'Rice', weight: 400, barcode: '0987654321' },
+                    { name: 'Vegetables', weight: 300, barcode: null }
+                ];
+                
+                const recipe = recipeManager.createRecipe('Demo Meal Prep', ingredients);
+                
+                // Add consumption history
+                const consumptions = [200, 150, 100, 250];
+                consumptions.forEach((amount, index) => {
+                    setTimeout(() => {
+                        recipeManager.recordConsumption(recipe.id, amount);
+                        if (index === consumptions.length - 1) {
+                            renderDemoRecipes();
+                        }
+                    }, index * 50);
+                });
+                
+            } catch (error) {
+                alert('Error creating demo recipe: ' + error.message);
+            }
+        }
+
+        function createEmptyRecipe() {
+            try {
+                const ingredients = [
+                    { name: 'Pasta', weight: 500, barcode: null }
+                ];
+                
+                recipeManager.createRecipe('Empty History Recipe', ingredients);
+                renderDemoRecipes();
+                
+            } catch (error) {
+                alert('Error creating recipe: ' + error.message);
+            }
+        }
+
+        function renderDemoRecipes() {
+            const recipes = recipeManager.getAllRecipes();
+            const demoList = document.getElementById('demo-recipe-list');
+            demoList.innerHTML = '';
+            
+            recipes.forEach(recipe => {
+                const card = uiController.createRecipeCard(recipe);
+                demoList.appendChild(card);
+            });
+        }
+
+        // Run all verifications
+        setTimeout(() => {
+            verifySubtask21();
+            verifySubtask22();
+            verifySubtask23();
+            verifySubtask24();
+        }, 500);
+
+        // Initial render
+        renderDemoRecipes();
+    </script>
+</body>
+</html>

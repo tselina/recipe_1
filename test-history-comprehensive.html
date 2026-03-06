@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive History UI Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #2196F3;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 0.5rem;
+        }
+        .test-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .test-result {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .success {
+            color: #2e7d32;
+            background: #e8f5e8;
+        }
+        .error {
+            color: #c62828;
+            background: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Consumption History UI - Comprehensive Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <div class="test-controls">
+                <button class="btn btn-primary" onclick="createRecipeWithHistory()">Create Recipe with History</button>
+                <button class="btn btn-primary" onclick="createRecipeWithoutHistory()">Create Recipe without History</button>
+                <button class="btn btn-secondary" onclick="addMoreConsumption()">Add More Consumption</button>
+                <button class="btn btn-danger" onclick="clearAllRecipes()">Clear All Recipes</button>
+            </div>
+            <div id="test-results" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Recipe Cards (Click "View History" to test)</h2>
+            <div id="recipe-list" class="recipe-grid"></div>
+        </div>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/barcode-generator.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    
+    <script>
+        // Initialize the app components
+        const storageManager = new StorageManager();
+        const productDatabase = new ProductDatabase(storageManager);
+        const recipeManager = new RecipeManager(storageManager);
+        const portionCalculator = new PortionCalculator();
+        const uiController = new UIController(recipeManager, portionCalculator, productDatabase, storageManager);
+
+        let testRecipeId = null;
+
+        function logResult(message, isSuccess = true) {
+            const resultsDiv = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.className = 'test-result ' + (isSuccess ? 'success' : 'error');
+            resultsDiv.textContent = `[${timestamp}] ${message}`;
+            console.log(message);
+        }
+
+        function renderRecipes() {
+            const recipes = recipeManager.getAllRecipes();
+            const recipeList = document.getElementById('recipe-list');
+            recipeList.innerHTML = '';
+            
+            if (recipes.length === 0) {
+                recipeList.innerHTML = '<p style="text-align: center; color: #666;">No recipes yet. Create one using the buttons above.</p>';
+                return;
+            }
+            
+            recipes.forEach(recipe => {
+                const card = uiController.createRecipeCard(recipe);
+                recipeList.appendChild(card);
+            });
+        }
+
+        function createRecipeWithHistory() {
+            try {
+                const ingredients = [
+                    { name: 'Chicken Breast', weight: 500, barcode: '1234567890' },
+                    { name: 'Brown Rice', weight: 300, barcode: '0987654321' },
+                    { name: 'Mixed Vegetables', weight: 200, barcode: '1122334455' }
+                ];
+                
+                const recipe = recipeManager.createRecipe('Healthy Meal Prep', ingredients);
+                testRecipeId = recipe.id;
+                
+                // Add multiple consumption entries with delays to ensure different timestamps
+                const consumptions = [250, 150, 100, 200];
+                let delay = 0;
+                
+                consumptions.forEach((amount, index) => {
+                    setTimeout(() => {
+                        recipeManager.recordConsumption(recipe.id, amount);
+                        
+                        if (index === consumptions.length - 1) {
+                            renderRecipes();
+                            const totalConsumed = consumptions.reduce((a, b) => a + b, 0);
+                            logResult(`✓ Created recipe with ${consumptions.length} consumption entries (${totalConsumed}g total consumed)`);
+                        }
+                    }, delay);
+                    delay += 50;
+                });
+                
+            } catch (error) {
+                logResult(`✗ Failed to create recipe: ${error.message}`, false);
+            }
+        }
+
+        function createRecipeWithoutHistory() {
+            try {
+                const ingredients = [
+                    { name: 'Pasta', weight: 400, barcode: '5544332211' },
+                    { name: 'Tomato Sauce', weight: 250, barcode: null }
+                ];
+                
+                const recipe = recipeManager.createRecipe('Simple Pasta', ingredients);
+                renderRecipes();
+                logResult(`✓ Created recipe without consumption history`);
+                
+            } catch (error) {
+                logResult(`✗ Failed to create recipe: ${error.message}`, false);
+            }
+        }
+
+        function addMoreConsumption() {
+            if (!testRecipeId) {
+                logResult('✗ No test recipe available. Create one first.', false);
+                return;
+            }
+            
+            try {
+                const recipe = recipeManager.getRecipeById(testRecipeId);
+                if (!recipe) {
+                    logResult('✗ Test recipe not found', false);
+                    return;
+                }
+                
+                if (recipe.isFullyConsumed()) {
+                    logResult('✗ Recipe is fully consumed', false);
+                    return;
+                }
+                
+                const amount = Math.min(50, recipe.remainingWeight);
+                recipeManager.recordConsumption(testRecipeId, amount);
+                renderRecipes();
+                logResult(`✓ Added consumption of ${amount}g. Remaining: ${recipe.remainingWeight - amount}g`);
+                
+            } catch (error) {
+                logResult(`✗ Failed to add consumption: ${error.message}`, false);
+            }
+        }
+
+        function clearAllRecipes() {
+            try {
+                const recipes = recipeManager.getAllRecipes();
+                recipes.forEach(r => recipeManager.deleteRecipe(r.id));
+                testRecipeId = null;
+                renderRecipes();
+                logResult(`✓ Cleared all recipes`);
+            } catch (error) {
+                logResult(`✗ Failed to clear recipes: ${error.message}`, false);
+            }
+        }
+
+        // Initial render
+        renderRecipes();
+        logResult('Test page loaded. Use the buttons above to test the consumption history UI.');
+    </script>
+</body>
+</html>

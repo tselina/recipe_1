@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Consumption History UI</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 2rem;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Consumption History UI Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Recipe Card with View History Button</h2>
+        <div id="test-recipe-list" class="recipe-grid"></div>
+    </div>
+
+    <script src="js/storage-manager.js"></script>
+    <script src="js/data-models.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/barcode-generator.js"></script>
+    <script src="js/product-database.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/portion-calculator.js"></script>
+    <script src="js/ui-controller.js"></script>
+    
+    <script>
+        // Initialize the app components
+        const storageManager = new StorageManager();
+        const productDatabase = new ProductDatabase(storageManager);
+        const recipeManager = new RecipeManager(storageManager);
+        const portionCalculator = new PortionCalculator();
+        const uiController = new UIController(recipeManager, portionCalculator, productDatabase, storageManager);
+
+        // Create a test recipe with consumption history
+        function createTestRecipe() {
+            try {
+                // Clear existing recipes
+                const recipes = recipeManager.getAllRecipes();
+                recipes.forEach(r => recipeManager.deleteRecipe(r.id));
+
+                // Create a new recipe
+                const ingredients = [
+                    { name: 'Chicken', weight: 500, barcode: '123456' },
+                    { name: 'Rice', weight: 300, barcode: '789012' },
+                    { name: 'Vegetables', weight: 200, barcode: null }
+                ];
+                
+                const recipe = recipeManager.createRecipe('Test Recipe with History', ingredients);
+                
+                // Simulate some consumption history
+                // First consumption
+                recipeManager.recordConsumption(recipe.id, 250);
+                
+                // Wait a bit and consume more
+                setTimeout(() => {
+                    recipeManager.recordConsumption(recipe.id, 150);
+                    
+                    setTimeout(() => {
+                        recipeManager.recordConsumption(recipe.id, 100);
+                        
+                        // Render the recipe card
+                        renderTestRecipe();
+                    }, 100);
+                }, 100);
+                
+            } catch (error) {
+                console.error('Failed to create test recipe:', error);
+                alert('Failed to create test recipe: ' + error.message);
+            }
+        }
+
+        function renderTestRecipe() {
+            const recipes = recipeManager.getAllRecipes();
+            const testList = document.getElementById('test-recipe-list');
+            testList.innerHTML = '';
+            
+            recipes.forEach(recipe => {
+                const card = uiController.createRecipeCard(recipe);
+                testList.appendChild(card);
+            });
+            
+            console.log('Test recipe created with consumption history');
+        }
+
+        // Create test recipe on load
+        createTestRecipe();
+    </script>
+</body>
+</html>

@@ -424,6 +424,9 @@ class UIController {
                 <button class="btn btn-secondary btn-small calculate-btn" data-recipe-id="${recipe.id}" ${isFullyConsumed ? 'disabled' : ''}>
                     ${isFullyConsumed ? 'Completed' : 'Calculate Portions'}
                 </button>
+                <button class="btn btn-primary btn-small view-history-btn" data-recipe-id="${recipe.id}">
+                    View History
+                </button>
                 <button class="btn btn-primary btn-small copy-btn" data-recipe-id="${recipe.id}">
                     Copy
                 </button>
@@ -438,6 +441,7 @@ class UIController {
         
         // Add event listeners
         const calculateBtn = card.querySelector('.calculate-btn');
+        const viewHistoryBtn = card.querySelector('.view-history-btn');
         const copyBtn = card.querySelector('.copy-btn');
         const resetBtn = card.querySelector('.reset-btn');
         const deleteBtn = card.querySelector('.delete-btn');
@@ -447,6 +451,10 @@ class UIController {
                 this.selectRecipeForCalculation(recipe.id);
             });
         }
+
+        viewHistoryBtn.addEventListener('click', () => {
+            this.showConsumptionHistory(recipe.id);
+        });
 
         copyBtn.addEventListener('click', () => {
             this.copyRecipe(recipe.id);
@@ -1961,6 +1969,253 @@ class UIController {
             
             // Show info message about barcode scanning not being available
             console.log('Barcode scanning not supported on this device');
+        }
+    }
+
+    /**
+     * Show consumption history modal for a recipe
+     * @param {string} recipeId - Recipe ID
+     */
+    showConsumptionHistory(recipeId) {
+        try {
+            const recipe = this.recipeManager.getRecipeById(recipeId);
+            if (!recipe) {
+                this.showErrorMessage('Recipe not found');
+                return;
+            }
+
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('history-modal');
+            if (!modal) {
+                modal = this.createHistoryModal();
+                document.body.appendChild(modal);
+            }
+
+            // Update modal content
+            this.renderHistoryModal(modal, recipe);
+
+            // Show modal
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+
+        } catch (error) {
+            console.error('Failed to show consumption history:', error);
+            this.showErrorMessage('Failed to load consumption history');
+        }
+    }
+
+    /**
+     * Create consumption history modal
+     * @returns {HTMLElement} Modal element
+     */
+    createHistoryModal() {
+        const modal = document.createElement('div');
+        modal.id = 'history-modal';
+        modal.className = 'modal hidden';
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" id="history-modal-overlay"></div>
+            <div class="modal-content history-modal-content">
+                <div class="modal-header">
+                    <h3 id="history-modal-title">Consumption History</h3>
+                    <button type="button" class="modal-close" id="close-history-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="history-modal-body">
+                    <!-- Content will be dynamically inserted -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="close-history-modal-btn">Close</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const closeBtn = modal.querySelector('#close-history-modal');
+        const closeBtnFooter = modal.querySelector('#close-history-modal-btn');
+        const overlay = modal.querySelector('#history-modal-overlay');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        closeBtnFooter.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+
+        // Prevent modal from closing when clicking inside content
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        return modal;
+    }
+
+    /**
+     * Render consumption history modal content
+     * @param {HTMLElement} modal - Modal element
+     * @param {Recipe} recipe - Recipe object
+     */
+    renderHistoryModal(modal, recipe) {
+        const titleEl = modal.querySelector('#history-modal-title');
+        const bodyEl = modal.querySelector('#history-modal-body');
+
+        titleEl.textContent = `Consumption History - ${recipe.name}`;
+
+        const history = recipe.consumptionHistory || [];
+
+        if (history.length === 0) {
+            // Show empty state
+            bodyEl.innerHTML = `
+                <div class="empty-history">
+                    <div class="empty-history-icon">📊</div>
+                    <p>No consumption history yet</p>
+                    <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">
+                        Start consuming portions to see your history here
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        // Calculate statistics
+        const stats = this.calculateHistoryStatistics(recipe, history);
+
+        // Render statistics
+        const statsHTML = `
+            <div class="history-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Total Consumed</div>
+                    <div class="stat-value">${stats.totalConsumed}g</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Consumption Count</div>
+                    <div class="stat-value">${stats.consumptionCount}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Average Portion</div>
+                    <div class="stat-value">${stats.averagePortion}g</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">First Consumed</div>
+                    <div class="stat-value" style="font-size: 0.9rem;">${stats.firstConsumed}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Last Consumed</div>
+                    <div class="stat-value" style="font-size: 0.9rem;">${stats.lastConsumed}</div>
+                </div>
+            </div>
+        `;
+
+        // Render history entries (chronological order - most recent first)
+        const entriesHTML = history
+            .slice()
+            .reverse()
+            .map((entry, index) => this.renderHistoryEntry(entry, index))
+            .join('');
+
+        bodyEl.innerHTML = `
+            ${statsHTML}
+            <div class="history-list">
+                ${entriesHTML}
+            </div>
+        `;
+
+        // Add event listeners for toggle buttons
+        bodyEl.querySelectorAll('.toggle-ingredients-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const entryId = e.target.dataset.entryId;
+                this.toggleHistoryIngredients(entryId);
+            });
+        });
+    }
+
+    /**
+     * Calculate statistics from consumption history
+     * @param {Recipe} recipe - Recipe object
+     * @param {Array} history - Consumption history array
+     * @returns {Object} Statistics object
+     */
+    calculateHistoryStatistics(recipe, history) {
+        const totalConsumed = history.reduce((sum, entry) => sum + entry.consumedWeight, 0);
+        const consumptionCount = history.length;
+        const averagePortion = consumptionCount > 0 ? totalConsumed / consumptionCount : 0;
+
+        const firstEntry = history[0];
+        const lastEntry = history[history.length - 1];
+
+        return {
+            totalConsumed: totalConsumed.toFixed(1),
+            consumptionCount: consumptionCount,
+            averagePortion: averagePortion.toFixed(1),
+            firstConsumed: new Date(firstEntry.timestamp).toLocaleDateString(),
+            lastConsumed: new Date(lastEntry.timestamp).toLocaleDateString()
+        };
+    }
+
+    /**
+     * Render a single history entry
+     * @param {ConsumptionHistory} entry - History entry
+     * @param {number} index - Entry index
+     * @returns {string} HTML string
+     */
+    renderHistoryEntry(entry, index) {
+        const date = new Date(entry.timestamp);
+        const dateStr = date.toLocaleDateString();
+        const timeStr = date.toLocaleTimeString();
+
+        const ingredientsHTML = entry.ingredientBreakdown
+            .map(ing => `
+                <li>
+                    <span class="history-ingredient-name">${this.storageManager.escapeHtml(ing.name)}</span>
+                    <span class="history-ingredient-weight">${ing.weight.toFixed(1)}g</span>
+                </li>
+            `)
+            .join('');
+
+        return `
+            <div class="history-entry">
+                <div class="history-entry-header">
+                    <div class="history-date">${dateStr} at ${timeStr}</div>
+                    <div class="history-weight">${entry.consumedWeight.toFixed(1)}g</div>
+                </div>
+                <div class="history-details">
+                    <div class="history-detail-row">
+                        <span class="history-detail-label">Remaining after:</span>
+                        <span class="history-detail-value">${entry.remainingWeightAfter.toFixed(1)}g</span>
+                    </div>
+                </div>
+                <div class="history-ingredients">
+                    <div class="history-ingredients-header">
+                        <span class="history-ingredients-title">Ingredients (${entry.ingredientBreakdown.length})</span>
+                        <button type="button" class="toggle-ingredients-btn" data-entry-id="${entry.id}">
+                            Show
+                        </button>
+                    </div>
+                    <ul class="history-ingredients-list" id="ingredients-${entry.id}" style="display: none;">
+                        ${ingredientsHTML}
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Toggle ingredients display for a history entry
+     * @param {string} entryId - History entry ID
+     */
+    toggleHistoryIngredients(entryId) {
+        const ingredientsList = document.getElementById(`ingredients-${entryId}`);
+        const toggleBtn = document.querySelector(`[data-entry-id="${entryId}"]`);
+
+        if (!ingredientsList || !toggleBtn) return;
+
+        if (ingredientsList.style.display === 'none') {
+            ingredientsList.style.display = 'block';
+            toggleBtn.textContent = 'Hide';
+        } else {
+            ingredientsList.style.display = 'none';
+            toggleBtn.textContent = 'Show';
         }
     }
 }

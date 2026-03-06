@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsumptionHistory Unit Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #2196F3;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 0.5rem;
+        }
+        .test-result {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .test-result.pass {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        .test-result.fail {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        .test-result.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .test-counters {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+        .counter {
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .counter span {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .counter.pass span { color: #2e7d32; }
+        .counter.fail span { color: #c62828; }
+        .summary {
+            padding: 1rem;
+            background: #fff3e0;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .summary h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>ConsumptionHistory Unit Tests</h1>
+    
+    <div class="test-section">
+        <h2>Test Summary</h2>
+        <div class="test-counters">
+            <div class="counter pass">Passed: <span id="pass-count">0</span></div>
+            <div class="counter fail">Failed: <span id="fail-count">0</span></div>
+            <div class="counter">Total: <span id="total-count">0</span></div>
+        </div>
+        <div id="summary" class="summary hidden"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="js/data-models.js"></script>
+    <script>
+        // Test counters
+        let passCount = 0;
+        let failCount = 0;
+        const results = [];
+
+        function logTest(name, passed, details = '') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            
+            const statusIcon = passed ? '✓' : '✗';
+            resultDiv.innerHTML = `<strong>${statusIcon} ${name}</strong>${details ? '<br>' + details : ''}`;
+            
+            document.getElementById('results').appendChild(resultDiv);
+            
+            if (passed) {
+                passCount++;
+            } else {
+                failCount++;
+            }
+            
+            updateCounters();
+            results.push({ name, passed, details });
+        }
+
+        function updateCounters() {
+            document.getElementById('pass-count').textContent = passCount;
+            document.getElementById('fail-count').textContent = failCount;
+            document.getElementById('total-count').textContent = passCount + failCount;
+        }
+
+        function showSummary() {
+            const total = passCount + failCount;
+            const passRate = ((passCount / total) * 100).toFixed(1);
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.classList.remove('hidden');
+            summaryDiv.innerHTML = `
+                <h3>Test Summary</h3>
+                <p><strong>Total Tests:</strong> ${total}</p>
+                <p><strong>Passed:</strong> ${passCount} (${passRate}%)</p>
+                <p><strong>Failed:</strong> ${failCount}</p>
+                <p><strong>Status:</strong> ${failCount === 0 ? '✓ All tests passed!' : '✗ Some tests failed'}</p>
+            `;
+        }
+
+        // ==================== UNIT TESTS ====================
+
+        console.log('=== Starting ConsumptionHistory Unit Tests ===');
+
+        // Test Suite 1: Creation and Validation
+        console.log('\n--- Test Suite 1: Creation and Validation ---');
+
+        try {
+            // Test 1.1: Create valid ConsumptionHistory instance
+            const history1 = new ConsumptionHistory(
+                'recipe_123',
+                100,
+                [
+                    { name: 'Flour', weight: 50, barcode: '123' },
+                    { name: 'Sugar', weight: 30, barcode: null },
+                    { name: 'Butter', weight: 20, barcode: '456' }
+                ]
+            );
+            history1.remainingWeightAfter = 150;
+            
+            logTest(
+                'Create valid ConsumptionHistory instance',
+                history1.id && history1.recipeId === 'recipe_123' && 
+                history1.consumedWeight === 100 && history1.ingredientBreakdown.length === 3,
+                `ID: ${history1.id}, Recipe ID: ${history1.recipeId}, Weight: ${history1.consumedWeight}g`
+            );
+
+            // Test 1.2: Validate minimum consumed weight
+            try {
+                new ConsumptionHistory('recipe_123', 0, []);
+                logTest('Reject zero consumed weight', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject zero consumed weight', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.3: Validate negative consumed weight
+            try {
+                new ConsumptionHistory('recipe_123', -10, []);
+                logTest('Reject negative consumed weight', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject negative consumed weight', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.4: Validate empty ingredient breakdown
+            try {
+                new ConsumptionHistory('recipe_123', 100, []);
+                logTest('Allow empty ingredient breakdown', true, 'Empty array is valid');
+            } catch (e) {
+                logTest('Allow empty ingredient breakdown', false, `Should allow empty array: ${e.message}`);
+            }
+
+            // Test 1.5: Validate ingredient breakdown with invalid ingredient
+            try {
+                new ConsumptionHistory('recipe_123', 100, [{ name: '', weight: 50 }]);
+                logTest('Reject ingredient with empty name', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject ingredient with empty name', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.6: Validate ingredient breakdown with negative weight
+            try {
+                new ConsumptionHistory('recipe_123', 100, [{ name: 'Flour', weight: -10 }]);
+                logTest('Reject ingredient with negative weight', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject ingredient with negative weight', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.7: Validate recipe ID validation
+            try {
+                new ConsumptionHistory('', 100, []);
+                logTest('Reject empty recipe ID', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject empty recipe ID', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.8: Validate timestamp is set
+            const history2 = new ConsumptionHistory('recipe_456', 50, []);
+            const timestampValid = history2.timestamp && !isNaN(new Date(history2.timestamp).getTime());
+            logTest('Timestamp is automatically set', timestampValid, `Timestamp: ${history2.timestamp}`);
+
+            // Test 1.9: Validate remainingWeightAfter default
+            const history3 = new ConsumptionHistory('recipe_789', 75, []);
+            logTest('remainingWeightAfter defaults to 0', history3.remainingWeightAfter === 0, 
+                `Value: ${history3.remainingWeightAfter}`);
+
+            // Test 1.10: Validate weight rounding
+            const history4 = new ConsumptionHistory('recipe_999', 100.555, []);
+            logTest('Consumed weight is rounded to 2 decimals', history4.consumedWeight === 100.56,
+                `Value: ${history4.consumedWeight}`);
+
+        } catch (error) {
+            logTest('Test suite setup', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 2: Serialization/Deserialization
+        console.log('\n--- Test Suite 2: Serialization/Deserialization ---');
+
+        try {
+            // Test 2.1: toObject() method
+            const original = new ConsumptionHistory(
+                'recipe_test_1',
+                150,
+                [
+                    { name: 'Chicken', weight: 100, barcode: '123' },
+                    { name: 'Rice', weight: 50, barcode: '456' }
+                ]
+            );
+            original.remainingWeightAfter = 200;
+            
+            const obj = original.toObject();
+            const serializationValid = obj.id && obj.recipeId === 'recipe_test_1' && 
+                obj.consumedWeight === 150 && obj.ingredientBreakdown.length === 2 &&
+                obj.timestamp && obj.remainingWeightAfter === 200;
+            
+            logTest('toObject() returns plain object', serializationValid,
+                `Keys: ${Object.keys(obj).join(', ')}`);
+
+            // Test 2.2: fromObject() method
+            const restored = ConsumptionHistory.fromObject(obj);
+            const deserializationValid = restored.id === original.id &&
+                restored.recipeId === original.recipeId &&
+                restored.consumedWeight === original.consumedWeight &&
+                restored.ingredientBreakdown.length === original.ingredientBreakdown.length;
+            
+            logTest('fromObject() creates instance', deserializationValid,
+                `Restored weight: ${restored.consumedWeight}g`);
+
+            // Test 2.3: Round-trip serialization
+            const roundTrip = ConsumptionHistory.fromObject(original.toObject());
+            const roundTripValid = roundTrip.consumedWeight === original.consumedWeight &&
+                roundTrip.recipeId === original.recipeId;
+            
+            logTest('Round-trip serialization preserves data', roundTripValid,
+                `Original: ${original.consumedWeight}g, Restored: ${roundTrip.consumedWeight}g`);
+
+            // Test 2.4: fromObject() with missing properties
+            try {
+                ConsumptionHistory.fromObject({});
+                logTest('Reject empty object', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject empty object', true, `Error: ${e.message}`);
+            }
+
+            // Test 2.5: fromObject() with invalid object
+            try {
+                ConsumptionHistory.fromObject('not an object');
+                logTest('Reject string input', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject string input', true, `Error: ${e.message}`);
+            }
+
+            // Test 2.6: fromObject() with null
+            try {
+                ConsumptionHistory.fromObject(null);
+                logTest('Reject null input', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject null input', true, `Error: ${e.message}`);
+            }
+
+            // Test 2.7: fromObject() preserves custom properties
+            const customObj = {
+                id: 'custom_id',
+                recipeId: 'recipe_custom',
+                consumedWeight: 200,
+                ingredientBreakdown: [],
+                timestamp: '2024-01-01T00:00:00.000Z',
+                remainingWeightAfter: 300,
+                customField: 'custom_value'
+            };
+            const customHistory = ConsumptionHistory.fromObject(customObj);
+            const customFieldPreserved = customHistory.customField === 'custom_value';
+            
+            logTest('fromObject() preserves custom properties', customFieldPreserved,
+                `Custom field: ${customHistory.customField}`);
+
+        } catch (error) {
+            logTest('Serialization test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 3: Edge Cases
+        console.log('\n--- Test Suite 3: Edge Cases ---');
+
+        try {
+            // Test 3.1: Very small consumed weight
+            const historySmall = new ConsumptionHistory('recipe_small', 0.01, []);
+            logTest('Allow very small consumed weight (0.01g)', historySmall.consumedWeight === 0.01,
+                `Value: ${historySmall.consumedWeight}g`);
+
+            // Test 3.2: Very large consumed weight
+            const historyLarge = new ConsumptionHistory('recipe_large', 10000, []);
+            logTest('Allow large consumed weight (10000g)', historyLarge.consumedWeight === 10000,
+                `Value: ${historyLarge.consumedWeight}g`);
+
+            // Test 3.3: Ingredient breakdown with many items
+            const manyIngredients = Array.from({ length: 20 }, (_, i) => ({
+                name: `Ingredient ${i}`,
+                weight: 10,
+                barcode: null
+            }));
+            const historyMany = new ConsumptionHistory('recipe_many', 200, manyIngredients);
+            logTest('Handle many ingredients in breakdown', historyMany.ingredientBreakdown.length === 20,
+                `Number of ingredients: ${historyMany.ingredientBreakdown.length}`);
+
+            // Test 3.4: Ingredient breakdown with null barcode
+            const historyNullBarcode = new ConsumptionHistory('recipe_null_barcode', 100, [
+                { name: 'Test', weight: 100, barcode: null }
+            ]);
+            logTest('Allow null barcode in ingredient', 
+                historyNullBarcode.ingredientBreakdown[0].barcode === null,
+                `Barcode: ${historyNullBarcode.ingredientBreakdown[0].barcode}`);
+
+            // Test 3.5: Ingredient breakdown with undefined barcode
+            const historyUndefinedBarcode = new ConsumptionHistory('recipe_undefined_barcode', 100, [
+                { name: 'Test', weight: 100 }
+            ]);
+            logTest('Allow undefined barcode in ingredient', 
+                historyUndefinedBarcode.ingredientBreakdown[0].barcode === undefined,
+                `Barcode: ${historyUndefinedBarcode.ingredientBreakdown[0].barcode}`);
+
+            // Test 3.6: fromObject() with missing timestamp
+            const objNoTimestamp = {
+                recipeId: 'recipe_test',
+                consumedWeight: 100,
+                ingredientBreakdown: []
+            };
+            const historyNoTimestamp = ConsumptionHistory.fromObject(objNoTimestamp);
+            const timestampAutoSet = historyNoTimestamp.timestamp && 
+                !isNaN(new Date(historyNoTimestamp.timestamp).getTime());
+            logTest('fromObject() auto-sets missing timestamp', timestampAutoSet,
+                `Timestamp: ${historyNoTimestamp.timestamp}`);
+
+            // Test 3.7: fromObject() with missing remainingWeightAfter
+            const objNoRemaining = {
+                recipeId: 'recipe_test',
+                consumedWeight: 100,
+                ingredientBreakdown: []
+            };
+            const historyNoRemaining = ConsumptionHistory.fromObject(objNoRemaining);
+            logTest('fromObject() defaults missing remainingWeightAfter to 0',
+                historyNoRemaining.remainingWeightAfter === 0,
+                `Value: ${historyNoRemaining.remainingWeightAfter}`);
+
+        } catch (error) {
+            logTest('Edge case test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 4: Ingredient Breakdown Validation
+        console.log('\n--- Test Suite 4: Ingredient Breakdown Validation ---');
+
+        try {
+            // Test 4.1: Ingredient breakdown with missing name
+            try {
+                new ConsumptionHistory('recipe_test', 100, [{ weight: 50 }]);
+                logTest('Reject ingredient without name', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject ingredient without name', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.2: Ingredient breakdown with missing weight
+            try {
+                new ConsumptionHistory('recipe_test', 100, [{ name: 'Test' }]);
+                logTest('Reject ingredient without weight', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject ingredient without weight', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.3: Ingredient breakdown with non-string name
+            try {
+                new ConsumptionHistory('recipe_test', 100, [{ name: 123, weight: 50 }]);
+                logTest('Reject non-string ingredient name', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject non-string ingredient name', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.4: Ingredient breakdown with non-number weight
+            try {
+                new ConsumptionHistory('recipe_test', 100, [{ name: 'Test', weight: '50' }]);
+                logTest('Reject non-number ingredient weight', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject non-number ingredient weight', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.5: Ingredient breakdown with whitespace-only name
+            try {
+                new ConsumptionHistory('recipe_test', 100, [{ name: '   ', weight: 50 }]);
+                logTest('Reject whitespace-only ingredient name', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject whitespace-only ingredient name', true, `Error: ${e.message}`);
+            }
+
+            // Test 4.6: Ingredient breakdown with zero weight
+            const historyZeroWeight = new ConsumptionHistory('recipe_test', 100, [
+                { name: 'Test', weight: 0 }
+            ]);
+            logTest('Allow zero weight ingredient', historyZeroWeight.ingredientBreakdown[0].weight === 0,
+                `Value: ${historyZeroWeight.ingredientBreakdown[0].weight}g`);
+
+            // Test 4.7: Ingredient breakdown with barcode as empty string
+            const historyEmptyBarcode = new ConsumptionHistory('recipe_test', 100, [
+                { name: 'Test', weight: 100, barcode: '' }
+            ]);
+            logTest('Allow empty string barcode', historyEmptyBarcode.ingredientBreakdown[0].barcode === '',
+                `Barcode: "${historyEmptyBarcode.ingredientBreakdown[0].barcode}"`);
+
+        } catch (error) {
+            logTest('Ingredient breakdown validation', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 5: Weight Rounding
+        console.log('\n--- Test Suite 5: Weight Rounding ---');
+
+        try {
+            // Test 5.1: Round consumed weight to 2 decimals
+            const historyRound1 = new ConsumptionHistory('recipe_round', 100.123456, []);
+            logTest('Round consumed weight to 2 decimals', historyRound1.consumedWeight === 100.12,
+                `Value: ${historyRound1.consumedWeight}g`);
+
+            // Test 5.2: Round ingredient weights in breakdown
+            const historyRound2 = new ConsumptionHistory('recipe_round2', 100, [
+                { name: 'Flour', weight: 33.333333, barcode: null },
+                { name: 'Sugar', weight: 33.333333, barcode: null },
+                { name: 'Butter', weight: 33.333334, barcode: null }
+            ]);
+            const weightsRounded = historyRound2.ingredientBreakdown.every(ing => 
+                Number.isInteger(ing.weight * 100) || (ing.weight * 100) % 1 === 0
+            );
+            logTest('Round ingredient weights in breakdown', weightsRounded,
+                `Weights: ${historyRound2.ingredientBreakdown.map(i => i.weight).join(', ')}`);
+
+            // Test 5.3: Round remainingWeightAfter
+            const historyRound3 = new ConsumptionHistory('recipe_round3', 100, []);
+            historyRound3.remainingWeightAfter = 150.555;
+            logTest('Round remainingWeightAfter to 2 decimals', historyRound3.remainingWeightAfter === 150.56,
+                `Value: ${historyRound3.remainingWeightAfter}g`);
+
+        } catch (error) {
+            logTest('Weight rounding test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 6: ID Generation
+        console.log('\n--- Test Suite 6: ID Generation ---');
+
+        try {
+            // Test 6.1: Unique IDs for different instances
+            const history1 = new ConsumptionHistory('recipe_test', 100, []);
+            const history2 = new ConsumptionHistory('recipe_test', 100, []);
+            const history3 = new ConsumptionHistory('recipe_test', 100, []);
+            
+            const uniqueIds = history1.id !== history2.id && 
+                history2.id !== history3.id && 
+                history1.id !== history3.id;
+            
+            logTest('Generate unique IDs for instances', uniqueIds,
+                `IDs: ${history1.id.substring(0, 15)}..., ${history2.id.substring(0, 15)}..., ${history3.id.substring(0, 15)}...`);
+
+            // Test 6.2: ID format validation
+            const idFormatValid = history1.id.startsWith('history_') && history1.id.length > 20;
+            logTest('ID format is correct', idFormatValid,
+                `Format: starts with "history_", length: ${history1.id.length}`);
+
+        } catch (error) {
+            logTest('ID generation test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // ==================== SUMMARY ====================
+        showSummary();
+        console.log('\n=== Test Run Complete ===');
+        console.log(`Passed: ${passCount}, Failed: ${failCount}`);
+
+    </script>
+</body>
+</html>

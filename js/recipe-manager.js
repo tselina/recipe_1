@@ -355,6 +355,93 @@ class RecipeManager {
     }
 
     /**
+     * Edits a consumption history entry
+     * @param {string} recipeId - ID of recipe
+     * @param {string} historyId - ID of history entry to edit
+     * @param {number} newWeight - New consumed weight
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe or history entry not found or validation fails
+     */
+    editHistoryEntry(recipeId, historyId, newWeight) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!historyId || typeof historyId !== 'string') {
+                throw new Error('History ID must be a non-empty string');
+            }
+
+            if (typeof newWeight !== 'number' || newWeight <= 0 || !isFinite(newWeight)) {
+                throw new Error('New weight must be a positive finite number');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Edit history entry (this validates)
+            recipe.editConsumptionHistory(historyId, newWeight);
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to edit history entry: ${error.message}`);
+        }
+    }
+
+    /**
+     * Deletes a consumption history entry
+     * @param {string} recipeId - ID of recipe
+     * @param {string} historyId - ID of history entry to delete
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe or history entry not found
+     */
+    deleteHistoryEntry(recipeId, historyId) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!historyId || typeof historyId !== 'string') {
+                throw new Error('History ID must be a non-empty string');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Delete history entry (this validates)
+            recipe.deleteConsumptionHistory(historyId);
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to delete history entry: ${error.message}`);
+        }
+    }
+
+    /**
      * Loads recipes from storage
      * @returns {Recipe[]} Array of Recipe instances
      * @private
@@ -516,6 +603,152 @@ class RecipeManager {
             return true;
         } catch (error) {
             throw new Error(`Failed to clear recipes: ${error.message}`);
+        }
+    }
+
+    /**
+     * Adds an ingredient to an existing recipe
+     * @param {string} recipeId - ID of recipe to add ingredient to
+     * @param {Ingredient|Object} ingredient - Ingredient to add
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe not found or validation fails
+     */
+    addIngredient(recipeId, ingredient) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!ingredient) {
+                throw new Error('Ingredient is required');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Store old total weight for percentage calculation
+            const oldTotalWeight = recipe.totalWeight;
+            
+            // Add ingredient (this validates)
+            recipe.addIngredientToExisting(ingredient);
+            
+            // Update history entries to reflect ingredient change
+            recipe.updateHistoryAfterIngredientChange(
+                `Ingredient added: ${ingredient.name || ingredient.ingredient?.name}`
+            );
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to add ingredient: ${error.message}`);
+        }
+    }
+
+    /**
+     * Removes an ingredient from an existing recipe
+     * @param {string} recipeId - ID of recipe to remove ingredient from
+     * @param {string} ingredientName - Name of ingredient to remove
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe not found or ingredient not found
+     */
+    removeIngredient(recipeId, ingredientName) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!ingredientName || typeof ingredientName !== 'string') {
+                throw new Error('Ingredient name must be a non-empty string');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Store removed ingredient for return
+            const removedIngredient = recipe.removeIngredientFromExisting(ingredientName);
+            
+            // Update history entries to reflect ingredient change
+            recipe.updateHistoryAfterIngredientChange(
+                `Ingredient removed: ${ingredientName}`
+            );
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to remove ingredient: ${error.message}`);
+        }
+    }
+
+    /**
+     * Updates the weight of an existing ingredient
+     * @param {string} recipeId - ID of recipe
+     * @param {string} ingredientName - Name of ingredient to update
+     * @param {number} newWeight - New weight for the ingredient
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe not found, ingredient not found, or validation fails
+     */
+    updateIngredient(recipeId, ingredientName, newWeight) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!ingredientName || typeof ingredientName !== 'string') {
+                throw new Error('Ingredient name must be a non-empty string');
+            }
+
+            if (typeof newWeight !== 'number' || newWeight <= 0 || !isFinite(newWeight)) {
+                throw new Error('New weight must be a positive finite number');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            
+            // Update ingredient weight (this validates)
+            recipe.updateIngredientWeight(ingredientName, newWeight);
+            
+            // Update history entries to reflect ingredient change
+            recipe.updateHistoryAfterIngredientChange(
+                `Ingredient weight updated: ${ingredientName} to ${newWeight}g`
+            );
+            
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            throw new Error(`Failed to update ingredient weight: ${error.message}`);
         }
     }
 }

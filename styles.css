@@ -1394,6 +1394,16 @@ body.modal-open {
     color: #333;
 }
 
+.history-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.history-actions .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
 .empty-history {
     text-align: center;
     padding: 3rem 1rem;
@@ -1433,5 +1443,79 @@ body.modal-open {
     
     .stat-value {
         font-size: 1.1rem;
+    }
+}
+
+/* Edit History Modal */
+.edit-history-modal-content {
+    width: 90vw;
+    max-width: 500px;
+    max-height: 85vh;
+}
+
+.edit-history-modal-content .form-group {
+    margin-bottom: 1rem;
+}
+
+.edit-history-modal-content .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.edit-history-modal-content .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.edit-history-modal-content .form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.edit-history-modal-content .preview-box {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.edit-history-modal-content .preview-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.edit-history-modal-content .preview-label {
+    color: #666;
+}
+
+.edit-history-modal-content .preview-value {
+    font-weight: 500;
+}
+
+.edit-history-modal-content .preview-value.positive {
+    color: #4CAF50;
+}
+
+.edit-history-modal-content .preview-value.negative {
+    color: #f44336;
+}
+
+.edit-history-modal-content .error {
+    color: #f44336;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .edit-history-modal-content {
+        width: 95vw;
     }
 }

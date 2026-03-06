@@ -2128,6 +2128,21 @@ class UIController {
                 this.toggleHistoryIngredients(entryId);
             });
         });
+
+        // Add event listeners for edit and delete buttons
+        bodyEl.querySelectorAll('.edit-history-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const historyId = e.target.dataset.historyId;
+                this.showEditHistoryModal(recipe.id, historyId);
+            });
+        });
+
+        bodyEl.querySelectorAll('.delete-history-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const historyId = e.target.dataset.historyId;
+                this.deleteHistoryEntry(recipe.id, historyId);
+            });
+        });
     }
 
     /**
@@ -2178,6 +2193,10 @@ class UIController {
                 <div class="history-entry-header">
                     <div class="history-date">${dateStr} at ${timeStr}</div>
                     <div class="history-weight">${entry.consumedWeight.toFixed(1)}g</div>
+                    <div class="history-actions">
+                        <button type="button" class="btn btn-sm btn-primary edit-history-btn" data-history-id="${entry.id}">Edit</button>
+                        <button type="button" class="btn btn-sm btn-danger delete-history-btn" data-history-id="${entry.id}">Delete</button>
+                    </div>
                 </div>
                 <div class="history-details">
                     <div class="history-detail-row">
@@ -2216,6 +2235,276 @@ class UIController {
         } else {
             ingredientsList.style.display = 'none';
             toggleBtn.textContent = 'Show';
+        }
+    }
+
+    /**
+     * Shows edit history modal
+     * @param {string} recipeId - Recipe ID
+     * @param {string} historyId - History entry ID
+     */
+    showEditHistoryModal(recipeId, historyId) {
+        try {
+            const recipe = this.recipeManager.getRecipeById(recipeId);
+            if (!recipe) {
+                this.showErrorMessage('Recipe not found');
+                return;
+            }
+
+            const historyEntry = recipe.consumptionHistory.find(h => h.id === historyId);
+            if (!historyEntry) {
+                this.showErrorMessage('History entry not found');
+                return;
+            }
+
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('edit-history-modal');
+            if (!modal) {
+                modal = this.createEditHistoryModal();
+                document.body.appendChild(modal);
+            }
+
+            // Update modal content
+            this.renderEditHistoryModal(modal, historyEntry);
+
+            // Show modal
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+
+        } catch (error) {
+            console.error('Failed to show edit history modal:', error);
+            this.showErrorMessage('Failed to load edit history modal');
+        }
+    }
+
+    /**
+     * Creates edit history modal
+     * @returns {HTMLElement} Modal element
+     */
+    createEditHistoryModal() {
+        const modal = document.createElement('div');
+        modal.id = 'edit-history-modal';
+        modal.className = 'modal hidden';
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" id="edit-history-modal-overlay"></div>
+            <div class="modal-content edit-history-modal-content">
+                <div class="modal-header">
+                    <h3 id="edit-history-modal-title">Edit History Entry</h3>
+                    <button type="button" class="modal-close" id="close-edit-history-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="edit-history-modal-body">
+                    <div class="form-group">
+                        <label for="edit-history-weight">Consumed Weight (g)</label>
+                        <input type="number" id="edit-history-weight" class="form-control" min="0.01" step="0.1" required>
+                        <small class="form-hint">Enter the new consumed weight</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Recalculation Preview</label>
+                        <div id="edit-history-preview" class="preview-box">
+                            <p>Enter a weight to see preview</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="close-edit-history-modal-btn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-edit-history-btn">Save Changes</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const closeBtn = modal.querySelector('#close-edit-history-modal');
+        const closeBtnFooter = modal.querySelector('#close-edit-history-modal-btn');
+        const saveBtn = modal.querySelector('#save-edit-history-btn');
+        const overlay = modal.querySelector('#edit-history-modal-overlay');
+        const weightInput = modal.querySelector('#edit-history-weight');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        closeBtnFooter.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        
+        saveBtn.addEventListener('click', () => {
+            const recipeId = modal.dataset.recipeId;
+            const historyId = modal.dataset.historyId;
+            const newWeight = parseFloat(weightInput.value);
+            
+            if (weightInput.checkValidity()) {
+                this.editHistoryEntry(recipeId, historyId, newWeight);
+                closeModal();
+            } else {
+                weightInput.reportValidity();
+            }
+        });
+
+        // Add input listener for preview
+        weightInput.addEventListener('input', (e) => {
+            const recipeId = modal.dataset.recipeId;
+            const historyId = modal.dataset.historyId;
+            this.updateEditHistoryPreview(modal, recipeId, historyId, parseFloat(e.target.value));
+        });
+
+        // Prevent modal from closing when clicking inside content
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        return modal;
+    }
+
+    /**
+     * Renders edit history modal content
+     * @param {HTMLElement} modal - Modal element
+     * @param {ConsumptionHistory} historyEntry - History entry
+     */
+    renderEditHistoryModal(modal, historyEntry) {
+        const titleEl = modal.querySelector('#edit-history-modal-title');
+        const weightInput = modal.querySelector('#edit-history-weight');
+        const previewEl = modal.querySelector('#edit-history-preview');
+
+        titleEl.textContent = `Edit History Entry - ${new Date(historyEntry.timestamp).toLocaleString()}`;
+        weightInput.value = historyEntry.consumedWeight.toFixed(1);
+        
+        // Store IDs in dataset
+        modal.dataset.recipeId = historyEntry.recipeId;
+        modal.dataset.historyId = historyEntry.id;
+
+        // Show initial preview
+        this.updateEditHistoryPreview(modal, historyEntry.recipeId, historyEntry.id, historyEntry.consumedWeight);
+    }
+
+    /**
+     * Updates edit history preview
+     * @param {HTMLElement} modal - Modal element
+     * @param {string} recipeId - Recipe ID
+     * @param {string} historyId - History entry ID
+     * @param {number} newWeight - New weight
+     */
+    updateEditHistoryPreview(modal, recipeId, historyId, newWeight) {
+        const previewEl = modal.querySelector('#edit-history-preview');
+        
+        if (!newWeight || newWeight <= 0) {
+            previewEl.innerHTML = '<p>Enter a weight to see preview</p>';
+            return;
+        }
+
+        try {
+            const recipe = this.recipeManager.getRecipeById(recipeId);
+            if (!recipe) {
+                previewEl.innerHTML = '<p class="error">Recipe not found</p>';
+                return;
+            }
+
+            const historyEntry = recipe.consumptionHistory.find(h => h.id === historyId);
+            if (!historyEntry) {
+                previewEl.innerHTML = '<p class="error">History entry not found</p>';
+                return;
+            }
+
+            // Calculate what would change
+            const weightDiff = newWeight - historyEntry.consumedWeight;
+            const weightDiffStr = weightDiff > 0 ? `+${weightDiff.toFixed(1)}g` : `${weightDiff.toFixed(1)}g`;
+            
+            // Calculate new remaining weight after this entry
+            const entryIndex = recipe.consumptionHistory.findIndex(h => h.id === historyId);
+            let newRemainingAfter = recipe.totalWeight;
+            
+            for (let i = 0; i < entryIndex; i++) {
+                newRemainingAfter -= recipe.consumptionHistory[i].consumedWeight;
+            }
+            newRemainingAfter -= newWeight;
+            newRemainingAfter = Math.max(0, newRemainingAfter);
+
+            // Calculate new remaining weight for recipe
+            let finalRemaining = newRemainingAfter;
+            for (let i = entryIndex + 1; i < recipe.consumptionHistory.length; i++) {
+                finalRemaining -= recipe.consumptionHistory[i].consumedWeight;
+            }
+            finalRemaining = Math.max(0, finalRemaining);
+
+            previewEl.innerHTML = `
+                <div class="preview-item">
+                    <span class="preview-label">Weight change:</span>
+                    <span class="preview-value ${weightDiff > 0 ? 'positive' : 'negative'}">${weightDiffStr}</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Remaining after this entry:</span>
+                    <span class="preview-value">${newRemainingAfter.toFixed(1)}g</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">Final remaining weight:</span>
+                    <span class="preview-value">${finalRemaining.toFixed(1)}g</span>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to update preview:', error);
+            previewEl.innerHTML = '<p class="error">Error calculating preview</p>';
+        }
+    }
+
+    /**
+     * Edits a history entry
+     * @param {string} recipeId - Recipe ID
+     * @param {string} historyId - History entry ID
+     * @param {number} newWeight - New consumed weight
+     */
+    editHistoryEntry(recipeId, historyId, newWeight) {
+        try {
+            // Validate weight
+            if (typeof newWeight !== 'number' || newWeight <= 0 || !isFinite(newWeight)) {
+                throw new Error('Weight must be a positive number');
+            }
+
+            // Call RecipeManager to update history
+            const recipe = this.recipeManager.editHistoryEntry(recipeId, historyId, newWeight);
+            
+            // Refresh history display
+            this.showConsumptionHistory(recipeId);
+            
+            // Update recipe card
+            this.updateRecipeList();
+            
+            this.showSuccessMessage('History entry updated successfully');
+            
+        } catch (error) {
+            console.error('Failed to edit history entry:', error);
+            this.showErrorMessage(error.message || 'Failed to update history entry');
+        }
+    }
+
+    /**
+     * Deletes a history entry
+     * @param {string} recipeId - Recipe ID
+     * @param {string} historyId - History entry ID
+     */
+    deleteHistoryEntry(recipeId, historyId) {
+        try {
+            // Show confirmation dialog
+            const confirmDelete = confirm('Are you sure you want to delete this history entry? This action cannot be undone.');
+            
+            if (!confirmDelete) {
+                return;
+            }
+
+            // Call RecipeManager to delete entry
+            const recipe = this.recipeManager.deleteHistoryEntry(recipeId, historyId);
+            
+            // Refresh history display
+            this.showConsumptionHistory(recipeId);
+            
+            // Update recipe card
+            this.updateRecipeList();
+            
+            this.showSuccessMessage('History entry deleted successfully');
+            
+        } catch (error) {
+            console.error('Failed to delete history entry:', error);
+            this.showErrorMessage(error.message || 'Failed to delete history entry');
         }
     }
 }

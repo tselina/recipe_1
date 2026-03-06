@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History Editing Unit Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #2196F3;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 0.5rem;
+        }
+        .test-result {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .test-result.pass {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        .test-result.fail {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        .test-result.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .test-counters {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+        .counter {
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .counter span {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .counter.pass span { color: #2e7d32; }
+        .counter.fail span { color: #c62828; }
+        .summary {
+            padding: 1rem;
+            background: #fff3e0;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .summary h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>History Editing Unit Tests</h1>
+    
+    <div class="test-section">
+        <h2>Test Summary</h2>
+        <div class="test-counters">
+            <div class="counter pass">Passed: <span id="pass-count">0</span></div>
+            <div class="counter fail">Failed: <span id="fail-count">0</span></div>
+            <div class="counter">Total: <span id="total-count">0</span></div>
+        </div>
+        <div id="summary" class="summary hidden"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="js/data-models.js"></script>
+    <script>
+        // Test counters
+        let passCount = 0;
+        let failCount = 0;
+
+        function logTest(name, passed, details = '') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            
+            const statusIcon = passed ? '✓' : '✗';
+            resultDiv.innerHTML = `<strong>${statusIcon} ${name}</strong>${details ? '<br>' + details : ''}`;
+            
+            document.getElementById('results').appendChild(resultDiv);
+            
+            if (passed) {
+                passCount++;
+            } else {
+                failCount++;
+            }
+            
+            updateCounters();
+        }
+
+        function updateCounters() {
+            document.getElementById('pass-count').textContent = passCount;
+            document.getElementById('fail-count').textContent = failCount;
+            document.getElementById('total-count').textContent = passCount + failCount;
+        }
+
+        function showSummary() {
+            const total = passCount + failCount;
+            const passRate = ((passCount / total) * 100).toFixed(1);
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.classList.remove('hidden');
+            summaryDiv.innerHTML = `
+                <h3>Test Summary</h3>
+                <p><strong>Total Tests:</strong> ${total}</p>
+                <p><strong>Passed:</strong> ${passCount} (${passRate}%)</p>
+                <p><strong>Failed:</strong> ${failCount}</p>
+                <p><strong>Status:</strong> ${failCount === 0 ? '✓ All tests passed!' : '✗ Some tests failed'}</p>
+            `;
+        }
+
+        // ==================== UNIT TESTS ====================
+
+        console.log('=== Starting History Editing Unit Tests ===');
+
+        // Test Suite 1: editConsumptionHistory() method
+        console.log('\n--- Test Suite 1: editConsumptionHistory() method ---');
+
+        try {
+            // Test 1.1: Edit first history entry
+            const recipe1 = new Recipe('Edit First Entry', [
+                { name: 'A', weight: 200, barcode: null },
+                { name: 'B', weight: 100, barcode: null }
+            ]);
+            
+            recipe1.consume(50);
+            recipe1.consume(30);
+            recipe1.consume(20);
+            
+            const firstEntryId = recipe1.consumptionHistory[0].id;
+            const updatedEntry = recipe1.editConsumptionHistory(firstEntryId, 60);
+            
+            const editFirstValid = updatedEntry.consumedWeight === 60 &&
+                recipe1.consumptionHistory[0].consumedWeight === 60;
+            
+            logTest('Edit first history entry', editFirstValid,
+                `New weight: ${updatedEntry.consumedWeight}g`);
+
+            // Test 1.2: Edit middle history entry
+            const recipe2 = new Recipe('Edit Middle Entry', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe2.consume(50);
+            recipe2.consume(30);
+            recipe2.consume(20);
+            
+            const middleEntryId = recipe2.consumptionHistory[1].id;
+            const updatedMiddle = recipe2.editConsumptionHistory(middleEntryId, 40);
+            
+            const editMiddleValid = updatedMiddle.consumedWeight === 40 &&
+                recipe2.consumptionHistory[1].consumedWeight === 40;
+            
+            logTest('Edit middle history entry', editMiddleValid,
+                `New weight: ${updatedMiddle.consumedWeight}g`);
+
+            // Test 1.3: Edit last history entry
+            const recipe3 = new Recipe('Edit Last Entry', [
+                { name: 'A', weight: 200, barcode: null }
+            ]);
+            
+            recipe3.consume(50);
+            recipe3.consume(30);
+            
+            const lastEntryId = recipe3.consumptionHistory[1].id;
+            const updatedLast = recipe3.editConsumptionHistory(lastEntryId, 40);
+            
+            const editLastValid = updatedLast.consumedWeight === 40 &&
+                recipe3.consumptionHistory[1].consumedWeight === 40;
+            
+            logTest('Edit last history entry', editLastValid,
+                `New weight: ${updatedLast.consumedWeight}g`);
+
+            // Test 1.4: Edit single entry
+            const recipe4 = new Recipe('Edit Single Entry', [
+                { name: 'A', weight: 200, barcode: null }
+            ]);
+            
+            recipe4.consume(50);
+            
+            const singleEntryId = recipe4.consumptionHistory[0].id;
+            const updatedSingle = recipe4.editConsumptionHistory(singleEntryId, 75);
+            
+            const editSingleValid = updatedSingle.consumedWeight === 75 &&
+                recipe4.consumptionHistory.length === 1;
+            
+            logTest('Edit single history entry', editSingleValid,
+                `New weight: ${updatedSingle.consumedWeight}g`);
+
+            // Test 1.5: Edit updates ingredient breakdown
+            const recipe5 = new Recipe('Edit Breakdown', [
+                { name: 'Flour', weight: 500, barcode: null },
+                { name: 'Sugar', weight: 300, barcode: null }
+            ]);
+            
+            recipe5.consume(100);
+            
+            const entryId = recipe5.consumptionHistory[0].id;
+            const updated = recipe5.editConsumptionHistory(entryId, 200);
+            
+            const breakdownUpdated = updated.ingredientBreakdown.length === 2 &&
+                updated.ingredientBreakdown[0].name === 'Flour' &&
+                updated.ingredientBreakdown[1].name === 'Sugar';
+            
+            logTest('Edit updates ingredient breakdown', breakdownUpdated,
+                `Ingredients: ${updated.ingredientBreakdown.map(i => i.name).join(', ')}`);
+
+            // Test 1.6: Edit with invalid history ID
+            try {
+                recipe1.editConsumptionHistory('invalid_id', 100);
+                logTest('Reject invalid history ID', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject invalid history ID', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.7: Edit with zero weight
+            try {
+                recipe1.editConsumptionHistory(recipe1.consumptionHistory[0].id, 0);
+                logTest('Reject zero weight edit', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject zero weight edit', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.8: Edit with negative weight
+            try {
+                recipe1.editConsumptionHistory(recipe1.consumptionHistory[0].id, -10);
+                logTest('Reject negative weight edit', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject negative weight edit', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.9: Edit with weight exceeding total
+            try {
+                recipe1.editConsumptionHistory(recipe1.consumptionHistory[0].id, 1000);
+                logTest('Reject weight exceeding total', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject weight exceeding total', true, `Error: ${e.message}`);
+            }
+
+            // Test 1.10: Recalculation after edit
+            const recipe6 = new Recipe('Recalculation Test', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe6.consume(50);
+            recipe6.consume(30);
+            recipe6.consume(20);
+            
+            // Edit first entry
+            recipe6.editConsumptionHistory(recipe6.consumptionHistory[0].id, 100);
+            
+            // Check remaining weight is recalculated
+            const remainingValid = recipe6.remainingWeight === 150; // 300 - 100 - 30 - 20
+            logTest('Recalculation after edit', remainingValid,
+                `Remaining: ${recipe6.remainingWeight}g (expected: 150)`);
+
+        } catch (error) {
+            logTest('editConsumptionHistory test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 2: deleteConsumptionHistory() method
+        console.log('\n--- Test Suite 2: deleteConsumptionHistory() method ---');
+
+        try {
+            // Test 2.1: Delete first entry
+            const recipe7 = new Recipe('Delete First Entry', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe7.consume(50);
+            recipe7.consume(30);
+            recipe7.consume(20);
+            
+            const firstId = recipe7.consumptionHistory[0].id;
+            const deletedFirst = recipe7.deleteConsumptionHistory(firstId);
+            
+            const deleteFirstValid = deletedFirst.consumedWeight === 50 &&
+                recipe7.consumptionHistory.length === 2 &&
+                recipe7.consumptionHistory[0].consumedWeight === 30;
+            
+            logTest('Delete first history entry', deleteFirstValid,
+                `Remaining entries: ${recipe7.consumptionHistory.length}`);
+
+            // Test 2.2: Delete middle entry
+            const recipe8 = new Recipe('Delete Middle Entry', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe8.consume(50);
+            recipe8.consume(30);
+            recipe8.consume(20);
+            
+            const middleId = recipe8.consumptionHistory[1].id;
+            const deletedMiddle = recipe8.deleteConsumptionHistory(middleId);
+            
+            const deleteMiddleValid = deletedMiddle.consumedWeight === 30 &&
+                recipe8.consumptionHistory.length === 2 &&
+                recipe8.consumptionHistory[0].consumedWeight === 50;
+            
+            logTest('Delete middle history entry', deleteMiddleValid,
+                `Remaining entries: ${recipe8.consumptionHistory.length}`);
+
+            // Test 2.3: Delete last entry
+            const recipe9 = new Recipe('Delete Last Entry', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe9.consume(50);
+            recipe9.consume(30);
+            
+            const lastId = recipe9.consumptionHistory[1].id;
+            const deletedLast = recipe9.deleteConsumptionHistory(lastId);
+            
+            const deleteLastValid = deletedLast.consumedWeight === 30 &&
+                recipe9.consumptionHistory.length === 1 &&
+                recipe9.consumptionHistory[0].consumedWeight === 50;
+            
+            logTest('Delete last history entry', deleteLastValid,
+                `Remaining entries: ${recipe9.consumptionHistory.length}`);
+
+            // Test 2.4: Delete single entry
+            const recipe10 = new Recipe('Delete Single Entry', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe10.consume(50);
+            
+            const singleId = recipe10.consumptionHistory[0].id;
+            const deletedSingle = recipe10.deleteConsumptionHistory(singleId);
+            
+            const deleteSingleValid = deletedSingle.consumedWeight === 50 &&
+                recipe10.consumptionHistory.length === 0;
+            
+            logTest('Delete single history entry', deleteSingleValid,
+                `Remaining entries: ${recipe10.consumptionHistory.length}`);
+
+            // Test 2.5: Delete with invalid history ID
+            try {
+                recipe7.deleteConsumptionHistory('invalid_id');
+                logTest('Reject invalid history ID delete', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject invalid history ID delete', true, `Error: ${e.message}`);
+            }
+
+            // Test 2.6: Recalculation after delete
+            const recipe11 = new Recipe('Delete Recalculation', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe11.consume(50);
+            recipe11.consume(30);
+            recipe11.consume(20);
+            
+            // Delete middle entry
+            recipe11.deleteConsumptionHistory(recipe11.consumptionHistory[1].id);
+            
+            // Check remaining weight is recalculated
+            const remainingAfterDelete = recipe11.remainingWeight === 220; // 300 - 50 - 20
+            logTest('Recalculation after delete', remainingAfterDelete,
+                `Remaining: ${recipe11.remainingWeight}g (expected: 220)`);
+
+        } catch (error) {
+            logTest('deleteConsumptionHistory test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 3: recalculateHistoryFromIndex() method
+        console.log('\n--- Test Suite 3: recalculateHistoryFromIndex() method ---');
+
+        try {
+            // Test 3.1: Recalculate from first index
+            const recipe12 = new Recipe('Recalc From First', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe12.consume(50);
+            recipe12.consume(30);
+            recipe12.consume(20);
+            
+            // Manually modify first entry
+            recipe12.consumptionHistory[0].consumedWeight = 100;
+            
+            // Recalculate from index 0
+            recipe12.recalculateHistoryFromIndex(0);
+            
+            const recalcFromFirstValid = recipe12.remainingWeight === 150; // 300 - 100 - 30 - 20
+            logTest('Recalculate from first index', recalcFromFirstValid,
+                `Remaining: ${recipe12.remainingWeight}g (expected: 150)`);
+
+            // Test 3.2: Recalculate from middle index
+            const recipe13 = new Recipe('Recalc From Middle', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe13.consume(50);
+            recipe13.consume(30);
+            recipe13.consume(20);
+            
+            // Manually modify middle entry
+            recipe13.consumptionHistory[1].consumedWeight = 60;
+            
+            // Recalculate from index 1
+            recipe13.recalculateHistoryFromIndex(1);
+            
+            const recalcFromMiddleValid = recipe13.remainingWeight === 190; // 300 - 50 - 60 - 20
+            logTest('Recalculate from middle index', recalcFromMiddleValid,
+                `Remaining: ${recipe13.remainingWeight}g (expected: 190)`);
+
+            // Test 3.3: Recalculate from last index
+            const recipe14 = new Recipe('Recalc From Last', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe14.consume(50);
+            recipe14.consume(30);
+            recipe14.consume(20);
+            
+            // Manually modify last entry
+            recipe14.consumptionHistory[2].consumedWeight = 40;
+            
+            // Recalculate from index 2
+            recipe14.recalculateHistoryFromIndex(2);
+            
+            const recalcFromLastValid = recipe14.remainingWeight === 190; // 300 - 50 - 30 - 40
+            logTest('Recalculate from last index', recalcFromLastValid,
+                `Remaining: ${recipe14.remainingWeight}g (expected: 190)`);
+
+            // Test 3.4: Recalculate with invalid index
+            try {
+                recipe12.recalculateHistoryFromIndex(-1);
+                logTest('Reject negative index', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject negative index', true, `Error: ${e.message}`);
+            }
+
+            // Test 3.5: Recalculate with out of bounds index
+            try {
+                recipe12.recalculateHistoryFromIndex(100);
+                logTest('Reject out of bounds index', false, 'Should have thrown error');
+            } catch (e) {
+                logTest('Reject out of bounds index', true, `Error: ${e.message}`);
+            }
+
+        } catch (error) {
+            logTest('recalculateHistoryFromIndex test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // Test Suite 4: Edge Cases
+        console.log('\n--- Test Suite 4: Edge Cases ---');
+
+        try {
+            // Test 4.1: Edit with decimal precision
+            const recipe15 = new Recipe('Decimal Precision', [
+                { name: 'A', weight: 333.33, barcode: null },
+                { name: 'B', weight: 333.33, barcode: null },
+                { name: 'C', weight: 333.34, barcode: null }
+            ]);
+            
+            recipe15.consume(100.555);
+            
+            const entryId = recipe15.consumptionHistory[0].id;
+            const updated = recipe15.editConsumptionHistory(entryId, 200.777);
+            
+            const decimalValid = updated.consumedWeight === 200.78 && // Rounded
+                updated.ingredientBreakdown.every(ing => 
+                    Number.isInteger(ing.weight * 100) || (ing.weight * 100) % 1 === 0
+                );
+            logTest('Edit with decimal precision', decimalValid,
+                `Weight: ${updated.consumedWeight}g`);
+
+            // Test 4.2: Multiple edits in sequence
+            const recipe16 = new Recipe('Multiple Edits', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe16.consume(50);
+            recipe16.consume(30);
+            
+            const id1 = recipe16.consumptionHistory[0].id;
+            const id2 = recipe16.consumptionHistory[1].id;
+            
+            recipe16.editConsumptionHistory(id1, 60);
+            recipe16.editConsumptionHistory(id2, 40);
+            
+            const multipleEditsValid = recipe16.consumptionHistory[0].consumedWeight === 60 &&
+                recipe16.consumptionHistory[1].consumedWeight === 40 &&
+                recipe16.remainingWeight === 200; // 300 - 60 - 40
+            logTest('Multiple edits in sequence', multipleEditsValid,
+                `Remaining: ${recipe16.remainingWeight}g`);
+
+            // Test 4.3: Edit then delete
+            const recipe17 = new Recipe('Edit Then Delete', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe17.consume(50);
+            recipe17.consume(30);
+            
+            const editId = recipe17.consumptionHistory[0].id;
+            recipe17.editConsumptionHistory(editId, 70);
+            
+            const deleteId = recipe17.consumptionHistory[0].id;
+            recipe17.deleteConsumptionHistory(deleteId);
+            
+            const editThenDeleteValid = recipe17.consumptionHistory.length === 1 &&
+                recipe17.consumptionHistory[0].consumedWeight === 30 &&
+                recipe17.remainingWeight === 230; // 300 - 30
+            logTest('Edit then delete', editThenDeleteValid,
+                `Remaining: ${recipe17.remainingWeight}g`);
+
+            // Test 4.4: Delete then edit
+            const recipe18 = new Recipe('Delete Then Edit', [
+                { name: 'A', weight: 300, barcode: null }
+            ]);
+            
+            recipe18.consume(50);
+            recipe18.consume(30);
+            recipe18.consume(20);
+            
+            const delId = recipe18.consumptionHistory[1].id;
+            recipe18.deleteConsumptionHistory(delId);
+            
+            const editId2 = recipe18.consumptionHistory[0].id;
+            recipe18.editConsumptionHistory(editId2, 80);
+            
+            const deleteThenEditValid = recipe18.consumptionHistory.length === 2 &&
+                recipe18.consumptionHistory[0].consumedWeight === 80 &&
+                recipe18.remainingWeight === 150; // 300 - 80 - 20
+            logTest('Delete then edit', deleteThenEditValid,
+                `Remaining: ${recipe18.remainingWeight}g`);
+
+        } catch (error) {
+            logTest('Edge cases test suite', false, `Setup error: ${error.message}`);
+        }
+
+        // ==================== SUMMARY ====================
+        showSummary();
+        console.log('\n=== Test Run Complete ===');
+        console.log(`Passed: ${passCount}, Failed: ${failCount}`);
+
+    </script>
+</body>
+</html>

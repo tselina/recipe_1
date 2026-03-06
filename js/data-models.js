@@ -167,6 +167,127 @@ class Recipe {
     }
 
     /**
+     * Adds an ingredient to an existing recipe (for editing)
+     * Maintains consumption percentage during recalculation
+     * @param {Ingredient|Object} ingredient - Ingredient to add
+     */
+    addIngredientToExisting(ingredient) {
+        let ingredientObj;
+        
+        if (ingredient instanceof Ingredient) {
+            ingredientObj = ingredient;
+        } else if (typeof ingredient === 'object') {
+            ingredientObj = Ingredient.fromObject(ingredient);
+        } else {
+            throw new Error('Invalid ingredient format');
+        }
+
+        // Check for duplicate ingredient names
+        const existingIngredient = this.ingredients.find(ing => 
+            ing.name.toLowerCase() === ingredientObj.name.toLowerCase()
+        );
+        
+        if (existingIngredient) {
+            throw new Error(`Ingredient "${ingredientObj.name}" already exists in this recipe`);
+        }
+
+        // Store old total weight for percentage calculation
+        const oldTotalWeight = this.totalWeight;
+        
+        this.ingredients.push(ingredientObj);
+        this._calculateTotalWeight();
+        
+        // Recalculate after ingredient change to maintain consumption percentage
+        this.recalculateAfterIngredientChange(oldTotalWeight);
+    }
+
+    /**
+     * Removes an ingredient from an existing recipe (for editing)
+     * Maintains consumption percentage during recalculation
+     * @param {string} ingredientName - Name of ingredient to remove
+     * @returns {Object} The removed ingredient
+     */
+    removeIngredientFromExisting(ingredientName) {
+        const index = this.ingredients.findIndex(ing => 
+            ing.name.toLowerCase() === ingredientName.toLowerCase()
+        );
+        
+        if (index === -1) {
+            throw new Error(`Ingredient "${ingredientName}" not found in recipe`);
+        }
+
+        // Store old total weight for percentage calculation
+        const oldTotalWeight = this.totalWeight;
+        
+        // Store removed ingredient for return
+        const removedIngredient = this.ingredients.splice(index, 1)[0];
+        this._calculateTotalWeight();
+        
+        // Recalculate after ingredient change to maintain consumption percentage
+        this.recalculateAfterIngredientChange(oldTotalWeight);
+        
+        return removedIngredient;
+    }
+
+    /**
+     * Updates the weight of an existing ingredient (for editing)
+     * Maintains consumption percentage during recalculation
+     * @param {string} ingredientName - Name of ingredient to update
+     * @param {number} newWeight - New weight for the ingredient
+     * @returns {Object} The updated ingredient
+     */
+    updateIngredientWeight(ingredientName, newWeight) {
+        const index = this.ingredients.findIndex(ing => 
+            ing.name.toLowerCase() === ingredientName.toLowerCase()
+        );
+        
+        if (index === -1) {
+            throw new Error(`Ingredient "${ingredientName}" not found in recipe`);
+        }
+
+        // Validate new weight
+        if (typeof newWeight !== 'number' || newWeight <= 0 || !isFinite(newWeight)) {
+            throw new Error('New ingredient weight must be a positive finite number');
+        }
+
+        // Store old total weight for percentage calculation
+        const oldTotalWeight = this.totalWeight;
+        
+        // Update ingredient weight
+        this.ingredients[index].weight = Math.round(newWeight * 100) / 100;
+        this._calculateTotalWeight();
+        
+        // Recalculate after ingredient change to maintain consumption percentage
+        this.recalculateAfterIngredientChange(oldTotalWeight);
+        
+        return this.ingredients[index];
+    }
+
+    /**
+     * Recalculates recipe state after ingredient changes to maintain consumption percentage
+     * @param {number} oldTotalWeight - Total weight before the change
+     */
+    recalculateAfterIngredientChange(oldTotalWeight) {
+        // Validate old total weight
+        if (typeof oldTotalWeight !== 'number' || oldTotalWeight <= 0 || !isFinite(oldTotalWeight)) {
+            throw new Error('Old total weight must be a positive finite number');
+        }
+
+        // Calculate consumption percentage before change
+        const consumedWeight = oldTotalWeight - this.remainingWeight;
+        const consumptionPercentage = oldTotalWeight > 0 ? consumedWeight / oldTotalWeight : 0;
+        
+        // Recalculate remaining weight based on new total weight while maintaining percentage
+        this.remainingWeight = Math.round((1 - consumptionPercentage) * this.totalWeight * 100) / 100;
+        
+        // Ensure remaining weight is non-negative and doesn't exceed total weight
+        this.remainingWeight = Math.max(0, Math.min(this.remainingWeight, this.totalWeight));
+        
+        // Round to 2 decimal places
+        this.remainingWeight = Math.round(this.remainingWeight * 100) / 100;
+    }
+
+    /**
      * Removes an ingredient from the recipe
      * @param {string} ingredientName - Name of ingredient to remove
      */
@@ -179,6 +300,9 @@ class Recipe {
             throw new Error(`Ingredient "${ingredientName}" not found in recipe`);
         }
 
+        // Store old total weight for percentage calculation
+        const oldTotalWeight = this.totalWeight;
+        
         this.ingredients.splice(index, 1);
         this._calculateTotalWeight();
         
@@ -186,6 +310,9 @@ class Recipe {
         if (this.remainingWeight > this.totalWeight) {
             this.remainingWeight = this.totalWeight;
         }
+        
+        // Recalculate after ingredient change to maintain consumption percentage
+        this.recalculateAfterIngredientChange(oldTotalWeight);
     }
 
     /**
@@ -269,6 +396,120 @@ class Recipe {
         }
         
         this.lastConsumed = new Date().toISOString();
+    }
+
+    /**
+     * Edits a consumption history entry
+     * @param {string} historyId - ID of history entry to edit
+     * @param {number} newConsumedWeight - New consumed weight
+     * @returns {Object} Updated history entry
+     * @throws {Error} If history entry not found or validation fails
+     */
+    editConsumptionHistory(historyId, newConsumedWeight) {
+        if (!historyId || typeof historyId !== 'string') {
+            throw new Error('History ID must be a non-empty string');
+        }
+
+        if (typeof newConsumedWeight !== 'number' || newConsumedWeight <= 0 || !isFinite(newConsumedWeight)) {
+            throw new Error('New consumed weight must be a positive finite number');
+        }
+
+        // Find history entry
+        const entryIndex = this.consumptionHistory.findIndex(h => h.id === historyId);
+        if (entryIndex === -1) {
+            throw new Error('History entry not found');
+        }
+
+        // Validate new weight doesn't exceed total weight
+        if (newConsumedWeight > this.totalWeight) {
+            throw new Error('Consumed weight cannot exceed total recipe weight');
+        }
+
+        // Update entry
+        const entry = this.consumptionHistory[entryIndex];
+        entry.consumedWeight = Math.round(newConsumedWeight * 100) / 100;
+        entry.ingredientBreakdown = this.calculateIngredientBreakdown(entry.consumedWeight);
+        
+        // Recalculate all subsequent entries
+        this.recalculateHistoryFromIndex(entryIndex);
+        
+        return entry;
+    }
+
+    /**
+     * Deletes a consumption history entry
+     * @param {string} historyId - ID of history entry to delete
+     * @returns {Object} Deleted history entry
+     * @throws {Error} If history entry not found
+     */
+    deleteConsumptionHistory(historyId) {
+        if (!historyId || typeof historyId !== 'string') {
+            throw new Error('History ID must be a non-empty string');
+        }
+
+        // Find history entry
+        const entryIndex = this.consumptionHistory.findIndex(h => h.id === historyId);
+        if (entryIndex === -1) {
+            throw new Error('History entry not found');
+        }
+
+        // Remove entry
+        const deletedEntry = this.consumptionHistory.splice(entryIndex, 1)[0];
+        
+        // Recalculate from this point
+        this.recalculateHistoryFromIndex(entryIndex);
+        
+        return deletedEntry;
+    }
+
+    /**
+     * Recalculates history entries from a given index
+     * @param {number} startIndex - Index to start recalculation from
+     * @throws {Error} If startIndex is invalid
+     */
+    recalculateHistoryFromIndex(startIndex) {
+        if (typeof startIndex !== 'number' || startIndex < 0 || startIndex >= this.consumptionHistory.length) {
+            throw new Error('Invalid start index for recalculation');
+        }
+
+        // Start from beginning or previous entry's remaining weight
+        let currentRemaining = startIndex === 0 ? 
+            this.totalWeight : 
+            this.consumptionHistory[startIndex - 1].remainingWeightAfter;
+        
+        // Recalculate each subsequent entry
+        for (let i = startIndex; i < this.consumptionHistory.length; i++) {
+            const entry = this.consumptionHistory[i];
+            currentRemaining -= entry.consumedWeight;
+            entry.remainingWeightAfter = Math.max(0, Math.round(currentRemaining * 100) / 100);
+        }
+        
+        // Update current remaining weight
+        this.remainingWeight = Math.max(0, Math.round(currentRemaining * 100) / 100);
+    }
+
+    /**
+     * Updates all consumption history entries to reflect ingredient changes
+     * Recalculates ingredient breakdowns for all history entries
+     * @param {string} changeNote - Optional note about the ingredient change
+     * @returns {Array} Array of updated history entries
+     */
+    updateHistoryAfterIngredientChange(changeNote = null) {
+        // Recalculate ingredient breakdowns for all history entries
+        this.consumptionHistory.forEach(entry => {
+            // Recalculate ingredient breakdown based on current recipe ingredients
+            entry.ingredientBreakdown = this.calculateIngredientBreakdown(entry.consumedWeight);
+            
+            // Add note about ingredient change if provided
+            if (changeNote) {
+                if (!entry.notes) {
+                    entry.notes = [];
+                }
+                entry.notes.push(changeNote);
+            }
+        });
+        
+        return this.consumptionHistory;
     }
 
     /**

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Validation Unit Tests - Task 11.3</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .test-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: #2196F3;
+        }
+        .test-status {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+        .status-running { background: #fff3e0; color: #e65100; }
+        .status-success { background: #e8f5e8; color: #2e7d32; }
+        .status-error { background: #ffebee; color: #c62828; }
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .test-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        .test-card.passed { border-left-color: #4caf50; }
+        .test-card.failed { border-left-color: #f44336; }
+        .test-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+            font-size: 0.95rem;
+        }
+        .test-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .test-log {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-success { color: #2e7d32; }
+        .log-error { color: #c62828; }
+        .log-info { color: #1976d2; }
+        .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #2196F3;
+            transition: width 0.3s ease;
+        }
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin-right: 0.5rem;
+        }
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .requirements {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 1rem;
+        }
+        .requirements h3 {
+            margin: 0 0 0.5rem 0;
+            color: #1976d2;
+        }
+        .requirements ul {
+            margin: 0.5rem 0 0 1.5rem;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>Form Validation Unit Tests</h1>
+            <p style="color: #666; margin: 0.5rem 0;">Task 11.3: Recipe Continuation Form Validation Tests</p>
+            <div class="test-status status-running" id="overall-status">Ready to Test</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Requirements Coverage</h2>
+            <div class="requirements">
+                <h3>Testing Requirements:</h3>
+                <ul>
+                    <li><strong>Requirement 9.1:</strong> Create button disabled until all required fields are valid</li>
+                    <li><strong>Requirement 9.2:</strong> Empty name shows "Name is required" error</li>
+                    <li><strong>Requirement 9.3:</strong> Missing ingredient name shows "Ingredient name is required" error</li>
+                    <li><strong>Requirement 9.4:</strong> Invalid weight shows "Weight must be greater than 0" error</li>
+                    <li><strong>Requirement 9.5:</strong> Error messages clear when user corrects input</li>
+                </ul>
+                <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                    Note: The current implementation shows error messages for empty recipe name and disables the Create button 
+                    when validation fails. Individual ingredient error messages are not displayed inline but validation 
+                    still occurs (button disabled when ingredients invalid).
+                </p>
+            </div>
+            <button class="btn btn-primary" onclick="runAllTests()">Run All Tests</button>
+            <button class="btn btn-secondary" onclick="clearTests()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Results</h2>
+            <div id="test-results">
+                <p style="color: #666;">Click "Run All Tests" to begin...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data-models.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="test-form-validation.js"></script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Card Button Unit Tests (Task 11.1)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .test-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .test-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: #2196F3;
+        }
+        .test-header p {
+            color: #666;
+            margin: 0.5rem 0;
+        }
+        .test-status {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+        .status-running { background: #fff3e0; color: #e65100; }
+        .status-success { background: #e8f5e8; color: #2e7d32; }
+        .status-error { background: #ffebee; color: #c62828; }
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+        }
+        .test-group {
+            margin: 1.5rem 0;
+        }
+        .test-group h3 {
+            color: #555;
+            margin: 1rem 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+        .test-result {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .test-pass {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+        .test-fail {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        .test-error-detail {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .progress-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #2196F3;
+            transition: width 0.3s ease;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1976D2;
+        }
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #616161;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div style="max-width: 1000px; margin: 0 auto;">
+        <div class="test-header">
+            <h1>Recipe Card Button Unit Tests</h1>
+            <p><strong>Task 11.1</strong> - Requirements 1.4, 1.5</p>
+            <p>Tests for "New from this" button rendering, disabled state, and tooltip</p>
+            <div class="test-status status-running" id="overall-status">Ready to Test</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="summary-stats" id="summary-stats" style="display: none;">
+                <div class="stat">
+                    <div class="stat-value" id="passed-count">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="failed-count">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="total-count">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button class="btn btn-primary" onclick="runAllTests()">Run All Tests</button>
+            <button class="btn btn-secondary" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Results</h2>
+            <div id="test-results">
+                <p style="color: #666; text-align: center;">Click "Run All Tests" to begin...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data-models.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/recipe-manager.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script>
+        // Test utilities
+        class TestRunner {
+            constructor() {
+                this.results = [];
+                this.currentGroup = '';
+            }
+
+            setGroup(groupName) {
+                this.currentGroup = groupName;
+            }
+
+            test(name, fn) {
+                try {
+                    fn();
+                    this.results.push({ 
+                        name, 
+                        group: this.currentGroup,
+                        passed: true 
+                    });
+                } catch (error) {
+                    this.results.push({ 
+                        name, 
+                        group: this.currentGroup,
+                        passed: false, 
+                        error: error.message 
+                    });
+                }
+            }
+
+            assertEqual(actual, expected, message = '') {
+                if (actual !== expected) {
+                    throw new Error(`${message}\nExpected: ${expected}\nActual: ${actual}`);
+                }
+            }
+
+            assertTrue(value, message = '') {
+                if (!value) {
+                    throw new Error(message || 'Expected true but got false');
+                }
+            }
+
+            assertFalse(value, message = '') {
+                if (value) {
+                    throw new Error(message || 'Expected false but got true');
+                }
+            }
+
+            assertNotNull(value, message = '') {
+                if (value === null || value === undefined) {
+                    throw new Error(message || 'Expected non-null value');
+                }
+            }
+
+            assertContains(str, substring, message = '') {
+                if (!str || !str.includes(substring)) {
+                    throw new Error(message || `Expected "${str}" to contain "${substring}"`);
+                }
+            }
+
+            getResults() {
+                return this.results;
+            }
+
+            getSummary() {
+                const passed = this.results.filter(r => r.passed).length;
+                const failed = this.results.filter(r => !r.passed).length;
+                return { passed, failed, total: this.results.length };
+            }
+        }
+
+        // Mock StorageManager
+        class MockStorageManager {
+            constructor() {
+                this.storage = {};
+            }
+
+            saveRecipe(recipe) {
+                this.storage[recipe.id] = recipe;
+                return Promise.resolve(recipe);
+            }
+
+            updateRecipe(recipe) {
+                this.storage[recipe.id] = recipe;
+                return Promise.resolve(recipe);
+            }
+
+            getRecipe(recipeId) {
+                return this.storage[recipeId] || null;
+            }
+
+            getAllRecipes() {
+                return Object.values(this.storage);
+            }
+
+            deleteRecipe(recipeId) {
+                delete this.storage[recipeId];
+                return Promise.resolve();
+            }
+
+            clearAllRecipes() {
+                this.storage = {};
+                return Promise.resolve();
+            }
+
+            escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+        }
+
+        // Test execution
+        async function runAllTests() {
+            const runner = new TestRunner();
+            const mockStorage = new MockStorageManager();
+            const recipeManager = new RecipeManager(mockStorage);
+            const portionCalculator = { calculatePortions: () => ({}) };
+            const productDatabase = { findByBarcode: () => null };
+            const uiController = new UIController(recipeManager, portionCalculator, productDatabase, mockStorage);
+
+            // Update UI
+            document.getElementById('overall-status').textContent = 'Running Tests...';
+            document.getElementById('overall-status').className = 'test-status status-running';
+            document.getElementById('test-results').innerHTML = '<p style="color: #666; text-align: center;">Running tests...</p>';
+
+            // Test Group 1: Button Rendering with Remaining Ingredients
+            runner.setGroup('Button Rendering with Remaining Ingredients');
+
+            runner.test('Button exists when recipe has remaining ingredients', async () => {
+                const recipe = await recipeManager.createRecipe('Test Recipe', [
+                    { name: 'Flour', weight: 500, barcode: '12345' }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertNotNull(button, 'Button should exist in recipe card');
+            });
+
+            runner.test('Button is enabled when recipe has remaining ingredients', async () => {
+                const recipe = await recipeManager.createRecipe('Active Recipe', [
+                    { name: 'Sugar', weight: 300, barcode: '67890' }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled when ingredients remain');
+            });
+
+            runner.test('Button is enabled with multiple remaining ingredients', async () => {
+                const recipe = await recipeManager.createRecipe('Multi-Ingredient Recipe', [
+                    { name: 'Flour', weight: 500, barcode: '12345' },
+                    { name: 'Sugar', weight: 300, barcode: '67890' },
+                    { name: 'Salt', weight: 50, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled with multiple remaining ingredients');
+            });
+
+            runner.test('Button is enabled when only one ingredient has remaining weight', async () => {
+                const recipe = await recipeManager.createRecipe('Partial Recipe', [
+                    { name: 'Flour', weight: 500, barcode: '12345' },
+                    { name: 'Sugar', weight: 0, barcode: '67890' }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled when at least one ingredient remains');
+            });
+
+            runner.test('Button has correct CSS classes', async () => {
+                const recipe = await recipeManager.createRecipe('CSS Test Recipe', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertTrue(button.classList.contains('btn'), 'Button should have "btn" class');
+                runner.assertTrue(button.classList.contains('btn-primary'), 'Button should have "btn-primary" class');
+                runner.assertTrue(button.classList.contains('btn-small'), 'Button should have "btn-small" class');
+            });
+
+            runner.test('Button has correct text content', async () => {
+                const recipe = await recipeManager.createRecipe('Text Test Recipe', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertContains(button.textContent.trim(), 'New from this', 'Button should display "New from this" text');
+            });
+
+            runner.test('Button has correct recipe ID data attribute', async () => {
+                const recipe = await recipeManager.createRecipe('Data Attribute Test', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertEqual(button.dataset.recipeId, recipe.id, 'Button should have correct recipe ID');
+            });
+
+            // Test Group 2: Button Disabled State (Requirement 1.4)
+            runner.setGroup('Button Disabled State (Requirement 1.4)');
+
+            runner.test('Button is disabled when all ingredients have zero weight', async () => {
+                const recipe = await recipeManager.createRecipe('Empty Recipe', [
+                    { name: 'Flour', weight: 0, barcode: '12345' },
+                    { name: 'Sugar', weight: 0, barcode: '67890' }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertTrue(button.disabled, 'Button should be disabled when no ingredients remain');
+            });
+
+            runner.test('Button is disabled when single ingredient has zero weight', async () => {
+                const recipe = await recipeManager.createRecipe('Single Empty', [
+                    { name: 'Salt', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertTrue(button.disabled, 'Button should be disabled with single zero-weight ingredient');
+            });
+
+            runner.test('Button disabled attribute is properly set in HTML', async () => {
+                const recipe = await recipeManager.createRecipe('Disabled Test', [
+                    { name: 'Flour', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertTrue(button.hasAttribute('disabled'), 'Button should have disabled attribute');
+            });
+
+            // Test Group 3: Tooltip Text (Requirement 1.4)
+            runner.setGroup('Tooltip Text (Requirement 1.4)');
+
+            runner.test('Tooltip exists when button is disabled', async () => {
+                const recipe = await recipeManager.createRecipe('Tooltip Test', [
+                    { name: 'Flour', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertTrue(button.hasAttribute('title'), 'Button should have title attribute for tooltip');
+            });
+
+            runner.test('Tooltip contains "No remaining ingredients" text', async () => {
+                const recipe = await recipeManager.createRecipe('Tooltip Content Test', [
+                    { name: 'Sugar', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                const tooltipText = button.getAttribute('title');
+                runner.assertContains(tooltipText, 'No remaining ingredients', 'Tooltip should indicate no remaining ingredients');
+            });
+
+            runner.test('Tooltip text matches specification exactly', async () => {
+                const recipe = await recipeManager.createRecipe('Exact Tooltip Test', [
+                    { name: 'Flour', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertEqual(button.getAttribute('title'), 'No remaining ingredients', 
+                    'Tooltip should match exact specification');
+            });
+
+            runner.test('No tooltip when button is enabled', async () => {
+                const recipe = await recipeManager.createRecipe('No Tooltip Test', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                const hasTooltip = button.hasAttribute('title') && button.getAttribute('title') !== '';
+                runner.assertFalse(hasTooltip, 'Button should not have tooltip when enabled');
+            });
+
+            // Test Group 4: Edge Cases
+            runner.setGroup('Edge Cases');
+
+            runner.test('Button enabled with very small remaining weight', async () => {
+                const recipe = await recipeManager.createRecipe('Small Weight Test', [
+                    { name: 'Flour', weight: 0.1, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled even with very small weight');
+            });
+
+            runner.test('Button enabled with large remaining weight', async () => {
+                const recipe = await recipeManager.createRecipe('Large Weight Test', [
+                    { name: 'Flour', weight: 10000, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled with large weight');
+            });
+
+            runner.test('Button enabled with mixed zero and non-zero weights', async () => {
+                const recipe = await recipeManager.createRecipe('Mixed Weights Test', [
+                    { name: 'Flour', weight: 0, barcode: null },
+                    { name: 'Sugar', weight: 0, barcode: null },
+                    { name: 'Salt', weight: 100, barcode: null },
+                    { name: 'Pepper', weight: 0, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const button = card.querySelector('.new-from-this-btn');
+                runner.assertFalse(button.disabled, 'Button should be enabled when at least one ingredient has weight');
+            });
+
+            runner.test('Button is in correct position within recipe card', async () => {
+                const recipe = await recipeManager.createRecipe('Structure Test', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const card = uiController.createRecipeCard(recipe);
+                const actionsDiv = card.querySelector('.recipe-actions');
+                const button = actionsDiv.querySelector('.new-from-this-btn');
+                runner.assertNotNull(button, 'Button should be within recipe-actions div');
+            });
+
+            runner.test('Multiple recipe cards have independent buttons', async () => {
+                const recipe1 = await recipeManager.createRecipe('Recipe 1', [
+                    { name: 'Flour', weight: 500, barcode: null }
+                ]);
+                const recipe2 = await recipeManager.createRecipe('Recipe 2', [
+                    { name: 'Sugar', weight: 0, barcode: null }
+                ]);
+                const card1 = uiController.createRecipeCard(recipe1);
+                const card2 = uiController.createRecipeCard(recipe2);
+                const button1 = card1.querySelector('.new-from-this-btn');
+                const button2 = card2.querySelector('.new-from-this-btn');
+                runner.assertFalse(button1.disabled, 'First recipe button should be enabled');
+                runner.assertTrue(button2.disabled, 'Second recipe button should be disabled');
+                runner.assertEqual(button1.dataset.recipeId, recipe1.id, 'First button should have correct recipe ID');
+                runner.assertEqual(button2.dataset.recipeId, recipe2.id, 'Second button should have correct recipe ID');
+            });
+
+            // Display results
+            displayResults(runner);
+        }
+
+        function displayResults(runner) {
+            const results = runner.getResults();
+            const summary = runner.getSummary();
+            
+            // Group results by test group
+            const groupedResults = {};
+            results.forEach(result => {
+                if (!groupedResults[result.group]) {
+                    groupedResults[result.group] = [];
+                }
+                groupedResults[result.group].push(result);
+            });
+
+            // Build HTML
+            let html = '';
+            for (const [groupName, groupResults] of Object.entries(groupedResults)) {
+                html += `<div class="test-group">`;
+                html += `<h3>${groupName}</h3>`;
+                groupResults.forEach(result => {
+                    const cssClass = result.passed ? 'test-pass' : 'test-fail';
+                    const icon = result.passed ? '✓' : '✗';
+                    html += `<div class="test-result ${cssClass}">`;
+                    html += `${icon} ${result.name}`;
+                    if (!result.passed && result.error) {
+                        html += `<div class="test-error-detail">${result.error}</div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            }
+
+            document.getElementById('test-results').innerHTML = html;
+
+            // Update status
+            const statusEl = document.getElementById('overall-status');
+            const progressEl = document.getElementById('progress-fill');
+            const summaryStats = document.getElementById('summary-stats');
+
+            if (summary.failed === 0) {
+                statusEl.textContent = 'All Tests Passed!';
+                statusEl.className = 'test-status status-success';
+            } else {
+                statusEl.textContent = `${summary.failed} Test(s) Failed`;
+                statusEl.className = 'test-status status-error';
+            }
+
+            progressEl.style.width = `${(summary.passed / summary.total) * 100}%`;
+            progressEl.style.background = summary.failed === 0 ? '#4caf50' : '#f44336';
+
+            // Show summary stats
+            summaryStats.style.display = 'flex';
+            document.getElementById('passed-count').textContent = summary.passed;
+            document.getElementById('failed-count').textContent = summary.failed;
+            document.getElementById('total-count').textContent = summary.total;
+
+            // Update stat colors
+            document.getElementById('passed-count').style.color = '#4caf50';
+            document.getElementById('failed-count').style.color = summary.failed > 0 ? '#f44336' : '#666';
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '<p style="color: #666; text-align: center;">Click "Run All Tests" to begin...</p>';
+            document.getElementById('overall-status').textContent = 'Ready to Test';
+            document.getElementById('overall-status').className = 'test-status status-running';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('summary-stats').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -8,10 +8,10 @@ class UIController {
         this.portionCalculator = portionCalculator;
         this.productDatabase = productDatabase;
         this.storageManager = storageManager;
-        
+
         this.currentView = 'recipe-list-view';
         this.isOnline = navigator.onLine;
-        
+
         // Initialize barcode scanner (optional)
         try {
             this.barcodeScanner = typeof BarcodeScanner !== 'undefined' ? new BarcodeScanner() : null;
@@ -20,10 +20,10 @@ class UIController {
             this.barcodeScanner = null;
         }
         this.currentScanningInput = null;
-        
+
         // Initialize barcode generator
         this.barcodeGenerator = new BarcodeGenerator();
-        
+
         this.init();
     }
 
@@ -57,21 +57,21 @@ class UIController {
                 this.showView('recipe-list-view');
             });
         }
-        
+
         const navCreate = this.safeGetElement('nav-create');
         if (navCreate) {
             navCreate.addEventListener('click', () => {
                 this.showView('recipe-create-view');
             });
         }
-        
+
         const navCalculate = this.safeGetElement('nav-calculate');
         if (navCalculate) {
             navCalculate.addEventListener('click', () => {
                 this.showView('portion-calculator-view');
             });
         }
-        
+
         const createFirstRecipe = this.safeGetElement('create-first-recipe');
         if (createFirstRecipe) {
             createFirstRecipe.addEventListener('click', () => {
@@ -93,7 +93,7 @@ class UIController {
             this.isOnline = true;
             this.updateOfflineStatus();
         });
-        
+
         window.addEventListener('offline', () => {
             this.isOnline = false;
             this.updateOfflineStatus();
@@ -106,7 +106,7 @@ class UIController {
                 this.hideErrorMessage();
             });
         }
-        
+
         const closeSuccess = this.safeGetElement('close-success');
         if (closeSuccess) {
             closeSuccess.addEventListener('click', () => {
@@ -124,34 +124,34 @@ class UIController {
         document.querySelectorAll('.view').forEach(view => {
             view.classList.remove('active');
         });
-        
+
         // Remove active state from nav buttons
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         // Show selected view - check if it exists
         const selectedView = this.safeGetElement(viewId);
         if (selectedView) {
             selectedView.classList.add('active');
         }
-        
+
         // Update navigation
         const navMap = {
             'recipe-list-view': 'nav-recipes',
             'recipe-create-view': 'nav-create',
             'portion-calculator-view': 'nav-calculate'
         };
-        
+
         if (navMap[viewId]) {
             const navElement = this.safeGetElement(navMap[viewId]);
             if (navElement) {
                 navElement.classList.add('active');
             }
         }
-        
+
         this.currentView = viewId;
-        
+
         // Update view-specific content
         this.updateViewContent(viewId);
     }
@@ -180,7 +180,7 @@ class UIController {
      */
     updateOfflineStatus() {
         const offlineIndicator = this.safeGetElement('offline-indicator');
-        
+
         if (offlineIndicator) {
             if (this.isOnline) {
                 offlineIndicator.classList.add('hidden');
@@ -197,11 +197,11 @@ class UIController {
     showErrorMessage(message) {
         const errorToast = this.safeGetElement('error-toast');
         const errorMessage = this.safeGetElement('error-message');
-        
+
         if (errorToast && errorMessage) {
             errorMessage.textContent = message;
             errorToast.classList.remove('hidden');
-            
+
             // Auto-hide after 5 seconds
             setTimeout(() => {
                 this.hideErrorMessage();
@@ -229,11 +229,11 @@ class UIController {
     showSuccessMessage(message) {
         const successToast = this.safeGetElement('success-toast');
         const successMessage = this.safeGetElement('success-message');
-        
+
         if (successToast && successMessage) {
             successMessage.textContent = message;
             successToast.classList.remove('hidden');
-            
+
             // Auto-hide after 3 seconds
             setTimeout(() => {
                 this.hideSuccessMessage();
@@ -281,34 +281,34 @@ class UIController {
         try {
             const searchInput = this.safeGetElement('recipe-search');
             const filterSelect = this.safeGetElement('recipe-filter');
-            
+
             // If elements don't exist (like in tests), just return
             if (!searchInput || !filterSelect) {
                 return;
             }
-            
+
             const searchQuery = searchInput.value.toLowerCase().trim();
             const filterValue = filterSelect.value;
-            
+
             let recipes = this.recipeManager.getAllRecipes();
-            
+
             // Apply search filter
             if (searchQuery) {
-                recipes = recipes.filter(recipe => 
+                recipes = recipes.filter(recipe =>
                     recipe.name.toLowerCase().includes(searchQuery) ||
-                    recipe.ingredients.some(ingredient => 
+                    recipe.ingredients.some(ingredient =>
                         ingredient.name.toLowerCase().includes(searchQuery)
                     )
                 );
             }
-            
+
             // Apply status filter
             if (filterValue === 'active') {
                 recipes = recipes.filter(recipe => !recipe.isFullyConsumed());
             } else if (filterValue === 'completed') {
                 recipes = recipes.filter(recipe => recipe.isFullyConsumed());
             }
-            
+
             // Sort recipes by last consumed date (most recent first), then by creation date
             recipes.sort((a, b) => {
                 if (a.lastConsumed && b.lastConsumed) {
@@ -321,16 +321,16 @@ class UIController {
                     return new Date(b.createdAt) - new Date(a.createdAt);
                 }
             });
-            
+
             const recipeList = this.safeGetElement('recipe-list');
             const emptyState = this.safeGetElement('empty-state');
             const noResultsState = this.safeGetElement('no-results-state');
-            
+
             // If elements don't exist (like in tests), just return
             if (!recipeList || !emptyState || !noResultsState) {
                 return;
             }
-            
+
             // Update clear search button visibility
             const clearSearchBtn = this.safeGetElement('clear-search');
             if (clearSearchBtn) {
@@ -340,10 +340,10 @@ class UIController {
                     clearSearchBtn.classList.add('hidden');
                 }
             }
-            
+
             if (recipes.length === 0) {
                 recipeList.style.display = 'none';
-                
+
                 // Show appropriate empty state
                 const allRecipes = this.recipeManager.getAllRecipes();
                 if (allRecipes.length === 0) {
@@ -357,10 +357,10 @@ class UIController {
                 recipeList.style.display = 'grid';
                 emptyState.style.display = 'none';
                 noResultsState.style.display = 'none';
-                
+
                 // Clear existing content
                 recipeList.innerHTML = '';
-                
+
                 // Add each recipe
                 recipes.forEach(recipe => {
                     const recipeCard = this.createRecipeCard(recipe);
@@ -382,16 +382,16 @@ class UIController {
         const card = document.createElement('div');
         card.className = 'recipe-card';
         card.dataset.recipeId = recipe.id;
-        
+
         const consumptionPercentage = recipe.getConsumptionPercentage();
         const isFullyConsumed = recipe.isFullyConsumed();
         const hasRemainingIngredients = recipe.ingredients.some(ing => ing.weight > 0);
-        
+
         // Format dates
         const createdDate = new Date(recipe.createdAt).toLocaleDateString();
-        const lastConsumedDate = recipe.lastConsumed ? 
+        const lastConsumedDate = recipe.lastConsumed ?
             new Date(recipe.lastConsumed).toLocaleDateString() : null;
-        
+
         card.innerHTML = `
             <div class="recipe-header">
                 <h3 class="recipe-name">${this.storageManager.escapeHtml(recipe.name)}</h3>
@@ -445,7 +445,7 @@ class UIController {
                 </button>
             </div>
         `;
-        
+
         // Add event listeners
         const calculateBtn = card.querySelector('.calculate-btn');
         const editRecipeBtn = card.querySelector('.edit-recipe-btn');
@@ -454,7 +454,7 @@ class UIController {
         const copyBtn = card.querySelector('.copy-btn');
         const resetBtn = card.querySelector('.reset-btn');
         const deleteBtn = card.querySelector('.delete-btn');
-        
+
         if (!isFullyConsumed) {
             calculateBtn.addEventListener('click', () => {
                 this.selectRecipeForCalculation(recipe.id);
@@ -484,11 +484,11 @@ class UIController {
                 this.resetRecipe(recipe.id);
             });
         }
-        
+
         deleteBtn.addEventListener('click', () => {
             this.deleteRecipe(recipe.id);
         });
-        
+
         return card;
     }
 
@@ -499,12 +499,12 @@ class UIController {
     selectRecipeForCalculation(recipeId) {
         // Switch to calculation view and select the recipe
         this.showView('portion-calculator-view');
-        
+
         // Set the selected recipe in the dropdown
         const recipeSelect = this.safeGetElement('recipe-select');
         if (recipeSelect) {
             recipeSelect.value = recipeId;
-            
+
             // Trigger the change event to update the UI
             recipeSelect.dispatchEvent(new Event('change'));
         }
@@ -541,7 +541,7 @@ class UIController {
             }
 
             const newName = prompt(`Enter a name for the copy of "${originalRecipe.name}":`, `${originalRecipe.name} (Copy)`);
-            
+
             if (newName === null) {
                 // User cancelled
                 return;
@@ -596,7 +596,7 @@ class UIController {
             const recipes = this.recipeManager.getAllRecipes();
             const recipeList = this.safeGetElement('recipe-list');
             const emptyState = this.safeGetElement('empty-state');
-            
+
             // Only update if elements exist
             if (recipeList && emptyState) {
                 if (recipes.length === 0) {
@@ -625,23 +625,23 @@ class UIController {
     resetRecipeForm() {
         const form = this.safeGetElement('recipe-form');
         const ingredientsList = this.safeGetElement('ingredients-list');
-        
+
         // Only proceed if elements exist
         if (!form || !ingredientsList) {
             return;
         }
-        
+
         // Reset form fields
         form.reset();
-        
+
         // Clear all error messages
         document.querySelectorAll('.error-message').forEach(errorEl => {
             errorEl.textContent = '';
         });
-        
+
         // Clear ingredients list
         ingredientsList.innerHTML = '';
-        
+
         // Add initial ingredient input
         this.addIngredientInput();
     }
@@ -653,17 +653,17 @@ class UIController {
         try {
             const recipes = this.recipeManager.getActiveRecipes();
             const recipeSelect = this.safeGetElement('recipe-select');
-            
+
             // Only proceed if element exists
             if (!recipeSelect) {
                 return;
             }
-            
+
             // Clear existing options (except the first placeholder)
             while (recipeSelect.children.length > 1) {
                 recipeSelect.removeChild(recipeSelect.lastChild);
             }
-            
+
             // Add recipe options
             recipes.forEach(recipe => {
                 const option = document.createElement('option');
@@ -671,7 +671,7 @@ class UIController {
                 option.textContent = `${recipe.name} (${recipe.remainingWeight}g remaining)`;
                 recipeSelect.appendChild(option);
             });
-            
+
         } catch (error) {
             console.error('Failed to update recipe selector:', error);
             this.showErrorMessage('Failed to load recipes for calculation');
@@ -686,14 +686,14 @@ class UIController {
         const filterSelect = this.safeGetElement('recipe-filter');
         const clearSearchBtn = this.safeGetElement('clear-search');
         const clearFiltersBtn = this.safeGetElement('clear-filters');
-        
+
         // Only set up listeners if elements exist
         if (!searchInput || !filterSelect || !clearSearchBtn || !clearFiltersBtn) {
             return;
         }
-        
+
         let searchDebounceTimer;
-        
+
         // Search input with debouncing
         searchInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
@@ -701,18 +701,18 @@ class UIController {
                 this.updateRecipeList();
             }, 300);
         });
-        
+
         // Filter select
         filterSelect.addEventListener('change', () => {
             this.updateRecipeList();
         });
-        
+
         // Clear search button
         clearSearchBtn.addEventListener('click', () => {
             searchInput.value = '';
             this.updateRecipeList();
         });
-        
+
         // Clear filters button
         clearFiltersBtn.addEventListener('click', () => {
             searchInput.value = '';
@@ -765,32 +765,32 @@ class UIController {
         const consumedWeightInput = this.safeGetElement('consumed-weight');
         const consumeAllBtn = this.safeGetElement('consume-all');
         const calculateBtn = this.safeGetElement('calculate-portions');
-        
+
         // Only set up listeners if elements exist
         if (!recipeSelect || !consumedWeightInput || !consumeAllBtn || !calculateBtn) {
             return;
         }
-        
+
         // Recipe selection
         recipeSelect.addEventListener('change', (e) => {
             this.handleRecipeSelection(e.target.value);
         });
-        
+
         // Consumed weight input validation
         consumedWeightInput.addEventListener('input', () => {
             this.validateConsumedWeight();
         });
-        
+
         // Consume all button
         consumeAllBtn.addEventListener('click', () => {
             this.handleConsumeAll();
         });
-        
+
         // Calculate portions button
         calculateBtn.addEventListener('click', () => {
             this.handleCalculatePortions();
         });
-        
+
         // Enter key on weight input triggers calculation
         consumedWeightInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -805,41 +805,41 @@ class UIController {
      */
     handleRecipeSelection(recipeId) {
         const recipeInfo = this.safeGetElement('recipe-info');
-        
+
         if (!recipeInfo) {
             return; // Element doesn't exist, skip
         }
-        
+
         if (!recipeId) {
             recipeInfo.classList.add('hidden');
             return;
         }
-        
+
         try {
             const recipe = this.recipeManager.getRecipeById(recipeId);
             if (!recipe) {
                 throw new Error('Recipe not found');
             }
-            
+
             // Update recipe info display
             const selectedRecipeName = this.safeGetElement('selected-recipe-name');
             const totalWeight = this.safeGetElement('total-weight');
             const remainingWeight = this.safeGetElement('remaining-weight');
-            
+
             if (selectedRecipeName) selectedRecipeName.textContent = recipe.name;
             if (totalWeight) totalWeight.textContent = recipe.totalWeight;
             if (remainingWeight) remainingWeight.textContent = recipe.remainingWeight;
-            
+
             // Show recipe info
             recipeInfo.classList.remove('hidden');
-            
+
             // Update consumed weight input max value
             const consumedWeightInput = this.safeGetElement('consumed-weight');
             if (consumedWeightInput) {
                 consumedWeightInput.max = recipe.remainingWeight;
                 consumedWeightInput.value = '';
             }
-            
+
         } catch (error) {
             console.error('Failed to handle recipe selection:', error);
             this.showErrorMessage('Failed to load recipe details');
@@ -852,18 +852,18 @@ class UIController {
      */
     addIngredientInput() {
         const ingredientsList = this.safeGetElement('ingredients-list');
-        
+
         // Only proceed if element exists
         if (!ingredientsList) {
             return;
         }
-        
+
         const ingredientIndex = ingredientsList.children.length;
-        
+
         const ingredientDiv = document.createElement('div');
         ingredientDiv.className = 'ingredient-item';
         ingredientDiv.dataset.index = ingredientIndex;
-        
+
         ingredientDiv.innerHTML = `
             <div class="ingredient-row-1">
                 <div class="ingredient-name-container">
@@ -904,19 +904,19 @@ class UIController {
                 </div>
             </div>
         `;
-        
+
         ingredientsList.appendChild(ingredientDiv);
-        
+
         // Set up autocomplete for the new ingredient name input
         const nameInput = ingredientDiv.querySelector('.ingredient-name');
         this.setupIngredientAutocomplete(nameInput, ingredientIndex);
-        
+
         // Set up remove button
         const removeBtn = ingredientDiv.querySelector('.remove-ingredient');
         removeBtn.addEventListener('click', () => {
             this.removeIngredientInput(ingredientIndex);
         });
-        
+
         // Set up barcode scan button
         const scanBtn = ingredientDiv.querySelector('.scan-barcode');
         if (this.barcodeScanner && this.barcodeScanner.isSupported) {
@@ -927,11 +927,11 @@ class UIController {
             // Hide scan button if not supported
             scanBtn.style.display = 'none';
         }
-        
+
         // Set up barcode generation button
         const barcodeBtn = ingredientDiv.querySelector('.barcode-button');
         const barcodeInput = ingredientDiv.querySelector('.ingredient-barcode');
-        
+
         // Show/hide barcode generation button based on input
         barcodeInput.addEventListener('input', () => {
             if (barcodeInput.value.trim()) {
@@ -940,22 +940,22 @@ class UIController {
                 barcodeBtn.style.display = 'none';
             }
         });
-        
+
         barcodeBtn.addEventListener('click', () => {
             this.showBarcodeModal(barcodeInput.value.trim());
         });
-        
+
         // Set up validation
         const weightInput = ingredientDiv.querySelector('.ingredient-weight');
-        
+
         weightInput.addEventListener('input', () => {
             this.validateIngredientWeight(weightInput);
         });
-        
+
         nameInput.addEventListener('input', () => {
             this.validateIngredientName(nameInput);
         });
-        
+
         barcodeInput.addEventListener('input', () => {
             this.validateIngredientBarcode(barcodeInput);
         });
@@ -967,14 +967,14 @@ class UIController {
      */
     removeIngredientInput(index) {
         const ingredientsList = this.safeGetElement('ingredients-list');
-        
+
         if (ingredientsList) {
             const ingredientItem = ingredientsList.querySelector(`[data-index="${index}"]`);
-            
+
             if (ingredientItem) {
                 ingredientItem.remove();
             }
-            
+
             // Ensure at least one ingredient input remains
             if (ingredientsList.children.length === 0) {
                 this.addIngredientInput();
@@ -989,21 +989,21 @@ class UIController {
      */
     setupIngredientAutocomplete(input, index) {
         const suggestionsContainer = this.safeGetElement(`suggestions-${index}`);
-        
+
         // Only proceed if container exists
         if (!suggestionsContainer) {
             return;
         }
-        
+
         let debounceTimer;
-        
+
         input.addEventListener('input', (e) => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 this.showIngredientSuggestions(e.target.value, suggestionsContainer, input);
             }, 300);
         });
-        
+
         // Hide suggestions when clicking outside
         document.addEventListener('click', (e) => {
             if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
@@ -1023,24 +1023,24 @@ class UIController {
             container.style.display = 'none';
             return;
         }
-        
+
         try {
             const suggestions = this.productDatabase.searchProducts(query);
-            
+
             if (suggestions.length === 0) {
                 container.style.display = 'none';
                 return;
             }
-            
+
             container.innerHTML = '';
             suggestions.slice(0, 5).forEach(product => {
                 const suggestionDiv = document.createElement('div');
                 suggestionDiv.className = 'autocomplete-suggestion';
                 suggestionDiv.textContent = product.name;
-                
+
                 suggestionDiv.addEventListener('click', () => {
                     input.value = product.name;
-                    
+
                     // Auto-fill barcode if available
                     if (product.barcode) {
                         const barcodeInput = input.closest('.ingredient-item').querySelector('.ingredient-barcode');
@@ -1048,64 +1048,64 @@ class UIController {
                             barcodeInput.value = product.barcode;
                         }
                     }
-                    
+
                     container.style.display = 'none';
-                    
+
                     // Focus on weight input
                     const weightInput = input.closest('.ingredient-item').querySelector('.ingredient-weight');
                     if (weightInput) {
                         weightInput.focus();
                     }
                 });
-                
+
                 container.appendChild(suggestionDiv);
             });
-            
+
             container.style.display = 'block';
-            
+
         } catch (error) {
             console.error('Failed to get ingredient suggestions:', error);
             container.style.display = 'none';
         }
     }
-    
+
     /**
      * Handle recipe form submission
      * @param {Event} event - Form submit event
      */
     handleRecipeFormSubmit(event) {
         event.preventDefault();
-        
+
         try {
             this.showLoading();
-            
+
             // Collect form data
             const formData = this.collectRecipeFormData();
-            
+
             // Validate form data
             const validationResult = this.validateRecipeForm(formData);
             if (!validationResult.isValid) {
                 this.displayFormErrors(validationResult.errors);
                 return;
             }
-            
+
             // Create recipe
             const recipe = this.recipeManager.createRecipe(formData.name, formData.ingredients);
-            
+
             // Update product database with new ingredients
             formData.ingredients.forEach(ingredient => {
                 this.productDatabase.addProduct(ingredient.name, ingredient.barcode);
             });
-            
+
             // Show success message
             this.showSuccessMessage(`Recipe "${recipe.name}" created successfully!`);
-            
+
             // Navigate back to recipe list
             this.showView('recipe-list-view');
-            
+
         } catch (error) {
             console.error('Failed to create recipe:', error);
-            
+
             // Handle specific error types
             if (error.message.includes('Storage quota exceeded')) {
                 this.handleStorageQuotaExceeded(error);
@@ -1132,14 +1132,14 @@ class UIController {
      */
     handleStorageQuotaExceeded(error) {
         const message = error.message + '\n\nWould you like to automatically clean up old data to free space?';
-        
+
         if (confirm(message)) {
             try {
                 this.showLoading();
-                
+
                 // Attempt to clean up storage
                 const cleanupResult = this.storageManager.cleanupStorage(500); // Try to free 500KB
-                
+
                 if (cleanupResult.success) {
                     this.showSuccessMessage(
                         `Cleaned up ${cleanupResult.freedSizeKB}KB of storage space by removing ${cleanupResult.removedItems.length} old items. Please try saving again.`
@@ -1149,7 +1149,7 @@ class UIController {
                         `Only freed ${cleanupResult.freedSizeKB}KB of ${cleanupResult.targetSizeKB}KB requested. You may need to manually delete some recipes.`
                     );
                 }
-                
+
             } catch (cleanupError) {
                 console.error('Failed to cleanup storage:', cleanupError);
                 this.showErrorMessage('Failed to clean up storage automatically. Please manually delete some recipes to free space.');
@@ -1168,22 +1168,22 @@ class UIController {
     collectRecipeFormData() {
         const recipeName = document.getElementById('recipe-name').value.trim();
         const ingredientItems = document.querySelectorAll('.ingredient-item');
-        
+
         const ingredients = [];
         ingredientItems.forEach(item => {
             const nameInput = item.querySelector('.ingredient-name');
             const weightInput = item.querySelector('.ingredient-weight');
             const barcodeInput = item.querySelector('.ingredient-barcode');
-            
+
             const name = nameInput.value.trim();
             const weight = parseFloat(weightInput.value);
             const barcode = barcodeInput.value.trim() || null;
-            
+
             if (name && !isNaN(weight) && weight > 0) {
                 ingredients.push({ name, weight, barcode });
             }
         });
-        
+
         return { name: recipeName, ingredients };
     }
 
@@ -1194,18 +1194,18 @@ class UIController {
      */
     validateRecipeForm(formData) {
         const errors = {};
-        
+
         // Validate recipe name
         const nameValidation = this.storageManager.validateRecipeName(formData.name);
         if (!nameValidation.isValid) {
             errors.recipeName = nameValidation.error;
         }
-        
+
         // Check for duplicate recipe name
         if (nameValidation.isValid) {
             try {
                 const existingRecipes = this.recipeManager.getAllRecipes();
-                const duplicateRecipe = existingRecipes.find(recipe => 
+                const duplicateRecipe = existingRecipes.find(recipe =>
                     recipe.name.toLowerCase() === formData.name.trim().toLowerCase()
                 );
                 if (duplicateRecipe) {
@@ -1216,7 +1216,7 @@ class UIController {
                 errors.recipeName = 'Unable to validate recipe name uniqueness';
             }
         }
-        
+
         // Validate ingredients
         if (formData.ingredients.length === 0) {
             errors.ingredients = 'At least one ingredient is required';
@@ -1224,7 +1224,7 @@ class UIController {
             // Validate each ingredient
             const ingredientErrors = [];
             const ingredientNames = [];
-            
+
             formData.ingredients.forEach((ingredient, index) => {
                 // Validate ingredient name
                 const nameValidation = this.storageManager.validateIngredientName(ingredient.name);
@@ -1233,13 +1233,13 @@ class UIController {
                 } else {
                     ingredientNames.push(ingredient.name.toLowerCase().trim());
                 }
-                
+
                 // Validate ingredient weight
                 const weightValidation = this.storageManager.validateWeight(ingredient.weight, `Ingredient ${index + 1} weight`);
                 if (!weightValidation.isValid) {
                     ingredientErrors.push(`Ingredient ${index + 1}: ${weightValidation.error}`);
                 }
-                
+
                 // Validate barcode if provided
                 if (ingredient.barcode) {
                     const barcodeValidation = this.storageManager.validateBarcode(ingredient.barcode);
@@ -1248,21 +1248,21 @@ class UIController {
                     }
                 }
             });
-            
+
             // Check for duplicate ingredient names
-            const duplicateNames = ingredientNames.filter((name, index) => 
+            const duplicateNames = ingredientNames.filter((name, index) =>
                 ingredientNames.indexOf(name) !== index
             );
-            
+
             if (duplicateNames.length > 0) {
                 ingredientErrors.push('Duplicate ingredient names are not allowed');
             }
-            
+
             if (ingredientErrors.length > 0) {
                 errors.ingredients = ingredientErrors.join('; ');
             }
         }
-        
+
         return {
             isValid: Object.keys(errors).length === 0,
             errors
@@ -1278,7 +1278,7 @@ class UIController {
         document.querySelectorAll('.error-message').forEach(errorEl => {
             errorEl.textContent = '';
         });
-        
+
         // Display recipe name error
         if (errors.recipeName) {
             const recipeNameError = document.getElementById('recipe-name-error');
@@ -1286,20 +1286,20 @@ class UIController {
                 recipeNameError.textContent = errors.recipeName;
             }
         }
-        
+
         // Display ingredients error
         if (errors.ingredients) {
             this.showErrorMessage(errors.ingredients);
         }
     }
-    
+
     /**
      * Handle add ingredient button click
      */
     handleAddIngredient() {
         this.addIngredientInput();
     }
-    
+
     /**
      * Handle cancel recipe button click
      */
@@ -1320,16 +1320,16 @@ class UIController {
     hasUnsavedChanges() {
         const recipeName = document.getElementById('recipe-name').value.trim();
         const ingredientInputs = document.querySelectorAll('.ingredient-name, .ingredient-weight, .ingredient-barcode');
-        
+
         if (recipeName) return true;
-        
+
         for (let input of ingredientInputs) {
             if (input.value.trim()) return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * Validate recipe name input
      * @param {string} name - Recipe name to validate
@@ -1337,18 +1337,18 @@ class UIController {
      */
     validateRecipeName(name) {
         const errorElement = document.getElementById('recipe-name-error');
-        
+
         const validation = this.storageManager.validateRecipeName(name);
-        
+
         if (!validation.isValid) {
             errorElement.textContent = validation.error;
             return false;
         }
-        
+
         // Check for duplicate names
         try {
             const existingRecipes = this.recipeManager.getAllRecipes();
-            const duplicateRecipe = existingRecipes.find(recipe => 
+            const duplicateRecipe = existingRecipes.find(recipe =>
                 recipe.name.toLowerCase() === name.trim().toLowerCase()
             );
             if (duplicateRecipe) {
@@ -1360,7 +1360,7 @@ class UIController {
             errorElement.textContent = 'Unable to validate recipe name';
             return false;
         }
-        
+
         errorElement.textContent = '';
         return true;
     }
@@ -1373,12 +1373,12 @@ class UIController {
     validateIngredientName(input) {
         const name = input.value;
         const validation = this.storageManager.validateIngredientName(name);
-        
+
         if (!validation.isValid) {
             input.setCustomValidity(validation.error);
             return false;
         }
-        
+
         input.setCustomValidity('');
         return true;
     }
@@ -1391,12 +1391,12 @@ class UIController {
     validateIngredientWeight(input) {
         const weight = input.value;
         const validation = this.storageManager.validateWeight(weight, 'Ingredient weight');
-        
+
         if (!validation.isValid) {
             input.setCustomValidity(validation.error);
             return false;
         }
-        
+
         input.setCustomValidity('');
         return true;
     }
@@ -1409,16 +1409,16 @@ class UIController {
     validateIngredientBarcode(input) {
         const barcode = input.value;
         const validation = this.storageManager.validateBarcode(barcode);
-        
+
         if (!validation.isValid) {
             input.setCustomValidity(validation.error);
             return false;
         }
-        
+
         input.setCustomValidity('');
         return true;
     }
-    
+
     /**
      * Validate consumed weight input
      * @returns {boolean} True if valid
@@ -1427,70 +1427,70 @@ class UIController {
         const consumedWeightInput = document.getElementById('consumed-weight');
         const errorElement = document.getElementById('consumed-weight-error');
         const recipeSelect = document.getElementById('recipe-select');
-        
+
         const weight = consumedWeightInput.value;
         const selectedRecipeId = recipeSelect.value;
-        
+
         if (!selectedRecipeId) {
             errorElement.textContent = 'Please select a recipe first';
             return false;
         }
-        
+
         // Validate weight format and value
         const weightValidation = this.storageManager.validateWeight(weight, 'Consumed weight');
         if (!weightValidation.isValid) {
             errorElement.textContent = weightValidation.error;
             return false;
         }
-        
+
         const numericWeight = weightValidation.value;
-        
+
         try {
             const recipe = this.recipeManager.getRecipeById(selectedRecipeId);
             if (!recipe) {
                 errorElement.textContent = 'Selected recipe not found';
                 return false;
             }
-            
+
             if (recipe.isFullyConsumed()) {
                 errorElement.textContent = 'This recipe is already fully consumed';
                 return false;
             }
-            
+
             if (numericWeight > recipe.remainingWeight) {
                 errorElement.textContent = `Cannot consume more than remaining weight (${recipe.remainingWeight}g)`;
                 return false;
             }
-            
+
             errorElement.textContent = '';
             return true;
-            
+
         } catch (error) {
             console.error('Failed to validate consumed weight:', error);
             errorElement.textContent = 'Validation error: ' + error.message;
             return false;
         }
     }
-    
+
     /**
      * Handle consume all button click
      */
     handleConsumeAll() {
         const recipeSelect = document.getElementById('recipe-select');
         const selectedRecipeId = recipeSelect.value;
-        
+
         if (!selectedRecipeId) {
             this.showErrorMessage('Please select a recipe first');
             return;
         }
-        
+
         try {
             const recipe = this.recipeManager.getRecipeById(selectedRecipeId);
             if (!recipe) {
                 this.showErrorMessage('Selected recipe not found');
                 return;
             }
-            
+
             if (recipe.isFullyConsumed()) {
                 this.showErrorMessage('This recipe is already fully consumed');
                 return;
@@ -1498,26 +1498,26 @@ class UIController {
 
             // Validate recipe for calculation to prevent division by zero and other errors
             this.portionCalculator.validateRecipeForCalculation(recipe);
-            
+
             // Calculate portions for all remaining weight
             const consumedWeight = recipe.remainingWeight;
             const results = this.portionCalculator.calculatePortions(recipe, consumedWeight);
-            
+
             // Update recipe in storage
             this.recipeManager.markAsFullyConsumed(selectedRecipeId);
-            
+
             // Display results
             this.displayCalculationResults(results, true);
-            
+
             // Update UI
             this.updateRecipeSelector();
             this.updateRecipeList();
-            
+
             this.showSuccessMessage(`Consumed all remaining ${consumedWeight}g of "${recipe.name}"`);
-            
+
         } catch (error) {
             console.error('Failed to consume all:', error);
-            
+
             // Handle specific calculation errors
             if (error.message.includes('division by zero') || error.message.includes('total weight must be')) {
                 this.showErrorMessage('Cannot consume all: Recipe has invalid weight data. Please check the recipe.');
@@ -1530,24 +1530,24 @@ class UIController {
             }
         }
     }
-    
+
     /**
      * Handle calculate portions button click
      */
     handleCalculatePortions() {
         const recipeSelect = document.getElementById('recipe-select');
         const consumedWeightInput = document.getElementById('consumed-weight');
-        
+
         const selectedRecipeId = recipeSelect.value;
         const consumedWeight = parseFloat(consumedWeightInput.value);
-        
+
         if (!this.validateConsumedWeight()) {
             return;
         }
-        
+
         try {
             this.showLoading();
-            
+
             const recipe = this.recipeManager.getRecipeById(selectedRecipeId);
             if (!recipe) {
                 throw new Error('Selected recipe not found');
@@ -1555,28 +1555,28 @@ class UIController {
 
             // Validate recipe for calculation to prevent division by zero and other errors
             this.portionCalculator.validateRecipeForCalculation(recipe);
-            
+
             // Calculate portions
             const results = this.portionCalculator.calculatePortions(recipe, consumedWeight);
-            
+
             // Update recipe in storage
             this.recipeManager.recordConsumption(selectedRecipeId, consumedWeight);
-            
+
             // Display results
             this.displayCalculationResults(results, false);
-            
+
             // Update UI
             this.updateRecipeSelector();
             this.updateRecipeList();
-            
+
             // Clear input
             consumedWeightInput.value = '';
-            
+
             this.showSuccessMessage(`Calculated portions for ${consumedWeight}g of "${recipe.name}"`);
-            
+
         } catch (error) {
             console.error('Failed to calculate portions:', error);
-            
+
             // Handle specific calculation errors
             if (error.message.includes('division by zero') || error.message.includes('total weight must be')) {
                 this.showErrorMessage('Cannot calculate portions: Recipe has invalid weight data. Please check the recipe.');
@@ -1600,10 +1600,10 @@ class UIController {
     displayCalculationResults(results, isFullConsumption) {
         const resultsSection = document.getElementById('calculation-results');
         const resultsList = document.getElementById('results-list');
-        
+
         // Clear previous results
         resultsList.innerHTML = '';
-        
+
         // Create results header
         const headerDiv = document.createElement('div');
         headerDiv.className = 'results-header';
@@ -1618,14 +1618,14 @@ class UIController {
             </p>
         `;
         resultsList.appendChild(headerDiv);
-        
+
         // Create ingredient results
         results.ingredients.forEach(ingredient => {
             const resultItem = document.createElement('div');
             resultItem.className = 'result-item';
-            
+
             const consumedPercentage = ((ingredient.consumedWeight / ingredient.originalWeight) * 100).toFixed(1);
-            
+
             resultItem.innerHTML = `
                 <div class="ingredient-info">
                     <div class="ingredient-name">${this.storageManager.escapeHtml(ingredient.name)}</div>
@@ -1647,13 +1647,13 @@ class UIController {
                     </div>
                 </div>
             `;
-            
+
             resultsList.appendChild(resultItem);
         });
-        
+
         // Show results section
         resultsSection.classList.remove('hidden');
-        
+
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -1717,7 +1717,7 @@ class UIController {
 
         if (this.currentScanningInput) {
             this.currentScanningInput.value = result.value;
-            
+
             // Trigger input event to update any validation
             this.currentScanningInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
@@ -1759,9 +1759,9 @@ class UIController {
         if (modal) {
             modal.classList.add('hidden');
         }
-        
+
         document.body.classList.remove('modal-open');
-        
+
         // Stop scanning
         if (this.barcodeScanner) {
             this.barcodeScanner.stopScanning();
@@ -1777,7 +1777,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'barcode-modal';
         modal.className = 'modal barcode-modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="barcode-modal-overlay"></div>
             <div class="modal-content barcode-modal-content">
@@ -1852,7 +1852,7 @@ class UIController {
             // Update modal content
             const barcodeImage = modal.querySelector('#barcode-image');
             const barcodeTextEl = modal.querySelector('#barcode-text');
-            
+
             barcodeImage.src = barcodeDataURL;
             barcodeTextEl.textContent = barcodeText;
 
@@ -1874,7 +1874,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'barcode-display-modal';
         modal.className = 'modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="barcode-display-overlay"></div>
             <div class="modal-content">
@@ -1943,7 +1943,7 @@ class UIController {
                 // Show ingredients
                 ingredientsDiv = document.createElement('div');
                 ingredientsDiv.className = 'recipe-ingredients-expanded';
-                
+
                 ingredientsDiv.innerHTML = `
                     <h4>Ingredients (${recipe.ingredients.length} items)</h4>
                     <ul class="ingredient-list">
@@ -1975,7 +1975,7 @@ class UIController {
      */
     updateBarcodeScannerUI() {
         const scanButtons = document.querySelectorAll('.scan-barcode');
-        
+
         if (this.barcodeScanner && this.barcodeScanner.isSupported) {
             scanButtons.forEach(btn => {
                 btn.style.display = 'inline-block';
@@ -1985,7 +1985,7 @@ class UIController {
             scanButtons.forEach(btn => {
                 btn.style.display = 'none';
             });
-            
+
             // Show info message about barcode scanning not being available
             console.log('Barcode scanning not supported on this device');
         }
@@ -2031,7 +2031,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'history-modal';
         modal.className = 'modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="history-modal-overlay"></div>
             <div class="modal-content history-modal-content">
@@ -2274,7 +2274,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'edit-history-modal';
         modal.className = 'modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="edit-history-modal-overlay"></div>
             <div class="modal-content edit-history-modal-content">
@@ -2317,12 +2317,12 @@ class UIController {
         closeBtn.addEventListener('click', closeModal);
         closeBtnFooter.addEventListener('click', closeModal);
         overlay.addEventListener('click', closeModal);
-        
+
         saveBtn.addEventListener('click', () => {
             const recipeId = modal.dataset.recipeId;
             const historyId = modal.dataset.historyId;
             const newWeight = parseFloat(weightInput.value);
-            
+
             if (weightInput.checkValidity()) {
                 this.editHistoryEntry(recipeId, historyId, newWeight);
                 closeModal();
@@ -2358,7 +2358,7 @@ class UIController {
 
         titleEl.textContent = `Edit History Entry - ${new Date(historyEntry.timestamp).toLocaleString()}`;
         weightInput.value = historyEntry.consumedWeight.toFixed(1);
-        
+
         // Store IDs in dataset
         modal.dataset.recipeId = historyEntry.recipeId;
         modal.dataset.historyId = historyEntry.id;
@@ -2376,7 +2376,7 @@ class UIController {
      */
     updateEditHistoryPreview(modal, recipeId, historyId, newWeight) {
         const previewEl = modal.querySelector('#edit-history-preview');
-        
+
         if (!newWeight || newWeight <= 0) {
             previewEl.innerHTML = '<p>Enter a weight to see preview</p>';
             return;
@@ -2398,11 +2398,11 @@ class UIController {
             // Calculate what would change
             const weightDiff = newWeight - historyEntry.consumedWeight;
             const weightDiffStr = weightDiff > 0 ? `+${weightDiff.toFixed(1)}g` : `${weightDiff.toFixed(1)}g`;
-            
+
             // Calculate new remaining weight after this entry
             const entryIndex = recipe.consumptionHistory.findIndex(h => h.id === historyId);
             let newRemainingAfter = recipe.totalWeight;
-            
+
             for (let i = 0; i < entryIndex; i++) {
                 newRemainingAfter -= recipe.consumptionHistory[i].consumedWeight;
             }
@@ -2451,15 +2451,15 @@ class UIController {
 
             // Call RecipeManager to update history
             const recipe = this.recipeManager.editHistoryEntry(recipeId, historyId, newWeight);
-            
+
             // Refresh history display
             this.showConsumptionHistory(recipeId);
-            
+
             // Update recipe card
             this.updateRecipeList();
-            
+
             this.showSuccessMessage('History entry updated successfully');
-            
+
         } catch (error) {
             console.error('Failed to edit history entry:', error);
             this.showErrorMessage(error.message || 'Failed to update history entry');
@@ -2475,22 +2475,22 @@ class UIController {
         try {
             // Show confirmation dialog
             const confirmDelete = confirm('Are you sure you want to delete this history entry? This action cannot be undone.');
-            
+
             if (!confirmDelete) {
                 return;
             }
 
             // Call RecipeManager to delete entry
             const recipe = this.recipeManager.deleteHistoryEntry(recipeId, historyId);
-            
+
             // Refresh history display
             this.showConsumptionHistory(recipeId);
-            
+
             // Update recipe card
             this.updateRecipeList();
-            
+
             this.showSuccessMessage('History entry deleted successfully');
-            
+
         } catch (error) {
             console.error('Failed to delete history entry:', error);
             this.showErrorMessage(error.message || 'Failed to delete history entry');
@@ -2527,7 +2527,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'edit-recipe-modal';
         modal.className = 'modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="edit-recipe-modal-overlay"></div>
             <div class="modal-content edit-recipe-modal-content">
@@ -2577,7 +2577,7 @@ class UIController {
     renderEditRecipeModal(modal, recipe) {
         const modalBody = modal.querySelector('#edit-recipe-modal-body');
         const recipeName = this.storageManager.escapeHtml(recipe.name);
-        
+
         let ingredientsHtml = '';
         recipe.ingredients.forEach((ingredient, index) => {
             const escapedName = this.storageManager.escapeHtml(ingredient.name);
@@ -2659,7 +2659,7 @@ class UIController {
     addEditIngredientRow(modal) {
         const list = modal.querySelector('#edit-ingredients-list');
         const index = list.children.length;
-        
+
         const row = document.createElement('div');
         row.className = 'edit-ingredient-row';
         row.dataset.index = index;
@@ -2693,7 +2693,7 @@ class UIController {
     removeEditIngredientRow(modal, index) {
         const list = modal.querySelector('#edit-ingredients-list');
         const rows = list.querySelectorAll('.edit-ingredient-row');
-        
+
         rows.forEach((row, i) => {
             if (parseInt(row.dataset.index) === index) {
                 row.remove();
@@ -2719,7 +2719,7 @@ class UIController {
     updateEditWeightPreview(modal) {
         const weightInputs = modal.querySelectorAll('.edit-ingredient-weight');
         let newTotal = 0;
-        
+
         weightInputs.forEach(input => {
             const weight = parseFloat(input.value) || 0;
             newTotal += weight;
@@ -2730,10 +2730,10 @@ class UIController {
         const change = newTotal - originalTotal;
 
         modal.querySelector('#edit-new-total-weight').textContent = newTotal.toFixed(1);
-        
+
         const changeElement = modal.querySelector('#edit-weight-change');
         const changeSpan = modal.querySelector('#edit-weight-change');
-        
+
         if (change > 0) {
             changeSpan.textContent = `+${change.toFixed(1)}`;
             changeElement.className = 'weight-change positive';
@@ -2753,7 +2753,7 @@ class UIController {
     handleSaveRecipeEdit(modal) {
         const recipeId = modal.dataset.recipeId;
         const recipe = this.recipeManager.getRecipeById(recipeId);
-        
+
         if (!recipe) {
             this.showErrorMessage('Recipe not found');
             return;
@@ -2762,7 +2762,7 @@ class UIController {
         // Get updated name
         const nameInput = modal.querySelector('#edit-recipe-name');
         const newName = nameInput.value.trim();
-        
+
         if (!newName) {
             this.showErrorMessage('Recipe name is required');
             return;
@@ -2776,7 +2776,7 @@ class UIController {
         nameInputs.forEach((input, i) => {
             const name = input.value.trim();
             const weight = parseFloat(weightInputs[i].value) || 0;
-            
+
             if (name && weight > 0) {
                 ingredients.push({ name, weight });
             }
@@ -2790,7 +2790,7 @@ class UIController {
         try {
             // Update the recipe
             this.recipeManager.updateRecipeIngredients(recipeId, ingredients);
-            
+
             // Update name if changed
             if (newName !== recipe.name) {
                 this.recipeManager.updateRecipe(recipeId, { name: newName });
@@ -2842,7 +2842,7 @@ class UIController {
         const modal = document.createElement('div');
         modal.id = 'continuation-modal';
         modal.className = 'modal hidden';
-        
+
         modal.innerHTML = `
             <div class="modal-overlay" id="continuation-modal-overlay"></div>
             <div class="modal-content continuation-modal-content">
@@ -2893,19 +2893,23 @@ class UIController {
         const modalBody = modal.querySelector('#continuation-modal-body');
         const recipeName = this.storageManager.escapeHtml(recipe.name);
         const defaultName = `${recipeName} - new`;
-        
+
         // Get remaining ingredients
         const remainingIngredients = recipe.ingredients.filter(ing => ing.weight > 0);
-        
+
         let ingredientsHtml = '';
         remainingIngredients.forEach((ingredient, index) => {
             const escapedName = this.storageManager.escapeHtml(ingredient.name);
             const barcode = ingredient.barcode ? this.storageManager.escapeHtml(ingredient.barcode) : '';
+            // Calculate remaining weight: (original_weight / total_weight) * recipe_remaining_weight
+            const remainingWeight = recipe.totalWeight > 0 ?
+                Math.round((ingredient.weight / recipe.totalWeight) * recipe.remainingWeight * 100) / 100 : 0;
+
             ingredientsHtml += `
                 <div class="continuation-ingredient-row" data-index="${index}">
                     <input type="text" class="continuation-ingredient-name" value="${escapedName}" placeholder="Ingredient name" data-index="${index}">
                     <input type="text" class="continuation-ingredient-barcode" value="${barcode}" placeholder="Barcode (optional)" data-index="${index}">
-                    <input type="number" class="continuation-ingredient-weight" value="${ingredient.weight}" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
+                    <input type="number" class="continuation-ingredient-weight" value="${remainingWeight}" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
                     <button type="button" class="btn btn-danger btn-sm remove-ingredient-btn" data-index="${index}">Remove</button>
                 </div>
             `;
@@ -2984,7 +2988,7 @@ class UIController {
     addContinuationIngredientRow(modal) {
         const list = modal.querySelector('#continuation-ingredients-list');
         const index = list.children.length;
-        
+
         const row = document.createElement('div');
         row.className = 'continuation-ingredient-row';
         row.dataset.index = index;
@@ -3019,7 +3023,7 @@ class UIController {
     removeContinuationIngredientRow(modal, index) {
         const list = modal.querySelector('#continuation-ingredients-list');
         const rows = list.querySelectorAll('.continuation-ingredient-row');
-        
+
         rows.forEach((row, i) => {
             if (parseInt(row.dataset.index) === index) {
                 row.remove();
@@ -3050,7 +3054,7 @@ class UIController {
         const createBtn = modal.querySelector('#create-continuation-btn');
         const nameInputs = modal.querySelectorAll('.continuation-ingredient-name');
         const weightInputs = modal.querySelectorAll('.continuation-ingredient-weight');
-        
+
         // Validate name
         const name = nameInput.value.trim();
         if (!name) {
@@ -3060,7 +3064,7 @@ class UIController {
             nameError.textContent = '';
             nameInput.classList.remove('invalid');
         }
-        
+
         // Validate at least one ingredient with name and valid weight
         let validIngredients = 0;
         nameInputs.forEach((input, i) => {
@@ -3070,10 +3074,10 @@ class UIController {
                 validIngredients++;
             }
         });
-        
+
         const isValid = name && validIngredients > 0;
         createBtn.disabled = !isValid;
-        
+
         return isValid;
     }
 
@@ -3084,7 +3088,7 @@ class UIController {
     handleContinuationSubmit(modal) {
         const recipeId = modal.dataset.recipeId;
         const recipe = this.recipeManager.getRecipeById(recipeId);
-        
+
         if (!recipe) {
             this.showErrorMessage('Recipe not found');
             return;
@@ -3093,7 +3097,7 @@ class UIController {
         // Get form data
         const nameInput = modal.querySelector('#continuation-name');
         const newName = nameInput.value.trim();
-        
+
         if (!newName) {
             this.showErrorMessage('Recipe name is required');
             return;
@@ -3109,7 +3113,7 @@ class UIController {
             const name = input.value.trim();
             const weight = parseFloat(weightInputs[i].value) || 0;
             const barcode = barcodeInputs[i].value.trim();
-            
+
             if (name && weight > 0) {
                 ingredients.push({ name, weight, barcode: barcode || null });
             }
@@ -3123,19 +3127,19 @@ class UIController {
         try {
             // Create new recipe
             const newRecipe = this.recipeManager.createRecipe(newName, ingredients);
-            
+
             // Reset original recipe weights
             this.recipeManager.resetRecipeAfterContinuation(recipeId, ingredients.map(i => i.name));
-            
+
             this.showSuccessMessage('Recipe created successfully');
             modal.classList.add('hidden');
             document.body.classList.remove('modal-open');
-            
-            // Navigate to new recipe
-            this.showView('recipe-create-view');
-            this.updateViewContent('recipe-create-view');
+
+            // Navigate to recipe list view to see the new recipe and updated original
+            this.showView('recipe-list-view');
             this.updateRecipeList();
-            
+            this.updateRecipeSelector();
+
         } catch (error) {
             this.showErrorMessage('Failed to create recipe: ' + error.message);
         }

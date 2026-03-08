@@ -27,27 +27,27 @@ class RecipeManager {
                 throw new Error('Recipe class not available');
             }
             const recipe = new RecipeClass(name, ingredients);
-            
+
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Check for duplicate recipe names
-            const existingRecipe = recipes.find(r => 
+            const existingRecipe = recipes.find(r =>
                 r.name.toLowerCase() === recipe.name.toLowerCase()
             );
-            
+
             if (existingRecipe) {
                 throw new Error(`Recipe "${recipe.name}" already exists`);
             }
-            
+
             // Add to recipes array
             recipes.push(recipe);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to create recipe: ${error.message}`);
         }
@@ -72,7 +72,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe to update
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -80,7 +80,7 @@ class RecipeManager {
             }
 
             const existingRecipe = recipes[recipeIndex];
-            
+
             // Create updated recipe data
             const updatedData = {
                 ...existingRecipe.toObject(),
@@ -89,11 +89,11 @@ class RecipeManager {
 
             // If name is being updated, check for duplicates
             if (updates.name && updates.name !== existingRecipe.name) {
-                const duplicateRecipe = recipes.find(r => 
-                    r.id !== recipeId && 
+                const duplicateRecipe = recipes.find(r =>
+                    r.id !== recipeId &&
                     r.name.toLowerCase() === updates.name.toLowerCase()
                 );
-                
+
                 if (duplicateRecipe) {
                     throw new Error(`Recipe "${updates.name}" already exists`);
                 }
@@ -105,15 +105,15 @@ class RecipeManager {
                 throw new Error('Recipe class not available');
             }
             const updatedRecipe = RecipeClass.fromObject(updatedData);
-            
+
             // Replace in array
             recipes[recipeIndex] = updatedRecipe;
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return updatedRecipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to update recipe: ${error.message}`);
         }
@@ -133,7 +133,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe to delete
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -142,12 +142,12 @@ class RecipeManager {
 
             // Remove from array
             recipes.splice(recipeIndex, 1);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return true;
-            
+
         } catch (error) {
             throw new Error(`Failed to delete recipe: ${error.message}`);
         }
@@ -178,7 +178,7 @@ class RecipeManager {
 
             const recipes = this._loadRecipes();
             return recipes.find(r => r.id === recipeId) || null;
-            
+
         } catch (error) {
             throw new Error(`Failed to retrieve recipe: ${error.message}`);
         }
@@ -197,14 +197,14 @@ class RecipeManager {
 
             const recipes = this._loadRecipes();
             const searchQuery = query.toLowerCase().trim();
-            
-            return recipes.filter(recipe => 
+
+            return recipes.filter(recipe =>
                 recipe.name.toLowerCase().includes(searchQuery) ||
-                recipe.ingredients.some(ingredient => 
+                recipe.ingredients.some(ingredient =>
                     ingredient.name.toLowerCase().includes(searchQuery)
                 )
             );
-            
+
         } catch (error) {
             throw new Error(`Failed to search recipes: ${error.message}`);
         }
@@ -250,7 +250,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -258,15 +258,15 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Record consumption (this validates consumed weight)
             recipe.consume(consumedWeight);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to record consumption: ${error.message}`);
         }
@@ -285,7 +285,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -293,15 +293,15 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Mark as fully consumed
             recipe.consumeAll();
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to mark recipe as consumed: ${error.message}`);
         }
@@ -316,12 +316,12 @@ class RecipeManager {
             const recipes = this._loadRecipes();
             const activeRecipes = recipes.filter(r => !r.isFullyConsumed());
             const completedRecipes = recipes.filter(r => r.isFullyConsumed());
-            
+
             return {
                 totalRecipes: recipes.length,
                 activeRecipes: activeRecipes.length,
                 completedRecipes: completedRecipes.length,
-                totalIngredients: recipes.reduce((total, recipe) => 
+                totalIngredients: recipes.reduce((total, recipe) =>
                     total + recipe.ingredients.length, 0
                 )
             };
@@ -348,7 +348,7 @@ class RecipeManager {
             }
 
             return recipe.consumptionHistory || [];
-            
+
         } catch (error) {
             throw new Error(`Failed to get consumption history: ${error.message}`);
         }
@@ -378,7 +378,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -386,15 +386,15 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Edit history entry (this validates)
             recipe.editConsumptionHistory(historyId, newWeight);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to edit history entry: ${error.message}`);
         }
@@ -419,7 +419,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -427,47 +427,50 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Delete history entry (this validates)
             recipe.deleteConsumptionHistory(historyId);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to delete history entry: ${error.message}`);
         }
     }
 
     /**
-     * Loads recipes from storage
+     * Resiliently loads recipes, skipping corrupted ones
      * @returns {Recipe[]} Array of Recipe instances
      * @private
      */
     _loadRecipes() {
         try {
             const recipesData = this.storage.load(this.storageKey);
-            
-            if (!recipesData) {
+
+            if (!recipesData || !Array.isArray(recipesData)) {
                 return [];
             }
 
-            if (!Array.isArray(recipesData)) {
-                throw new Error('Stored recipes data is not an array');
-            }
-
-            // Convert plain objects back to Recipe instances
             const RecipeClass = window.Recipe || (typeof Recipe !== 'undefined' ? Recipe : null);
             if (!RecipeClass) {
                 throw new Error('Recipe class not available');
             }
-            return recipesData.map(recipeData => RecipeClass.fromObject(recipeData));
-            
+
+            const recipes = [];
+            recipesData.forEach((recipeData, index) => {
+                try {
+                    recipes.push(RecipeClass.fromObject(recipeData));
+                } catch (error) {
+                    console.warn(`Skipping corrupted recipe at index ${index}:`, error.message, recipeData);
+                }
+            });
+            return recipes;
+
         } catch (error) {
-            // If data is corrupted, start fresh
-            console.warn('Failed to load recipes, starting with empty list:', error.message);
+            console.error('Failed to load recipes safely:', error.message);
             return [];
         }
     }
@@ -484,7 +487,7 @@ class RecipeManager {
 
         // Convert Recipe instances to plain objects for storage
         const recipesData = recipes.map(recipe => recipe.toObject());
-        
+
         // Save to storage
         this.storage.save(this.storageKey, recipesData);
     }
@@ -508,7 +511,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe to copy
             const originalRecipe = recipes.find(r => r.id === recipeId);
             if (!originalRecipe) {
@@ -522,10 +525,10 @@ class RecipeManager {
             }
 
             // Check for duplicate recipe names
-            const existingRecipe = recipes.find(r => 
+            const existingRecipe = recipes.find(r =>
                 r.name.toLowerCase() === newName.toLowerCase()
             );
-            
+
             if (existingRecipe) {
                 throw new Error(`Recipe "${newName}" already exists`);
             }
@@ -543,15 +546,15 @@ class RecipeManager {
                 throw new Error('Recipe class not available');
             }
             const copiedRecipe = new RecipeClass(newName, ingredientsCopy);
-            
+
             // Add to recipes array
             recipes.push(copiedRecipe);
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return copiedRecipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to copy recipe: ${error.message}`);
         }
@@ -571,7 +574,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe to reset
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -579,15 +582,15 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Reset consumption
             recipe.resetConsumption();
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to reset recipe: ${error.message}`);
         }
@@ -625,7 +628,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -633,23 +636,23 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Store old total weight for percentage calculation
             const oldTotalWeight = recipe.totalWeight;
-            
+
             // Add ingredient (this validates)
             recipe.addIngredientToExisting(ingredient);
-            
+
             // Update history entries to reflect ingredient change
             recipe.updateHistoryAfterIngredientChange(
                 `Ingredient added: ${ingredient.name || ingredient.ingredient?.name}`
             );
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to add ingredient: ${error.message}`);
         }
@@ -674,7 +677,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -682,20 +685,20 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Store removed ingredient for return
             const removedIngredient = recipe.removeIngredientFromExisting(ingredientName);
-            
+
             // Update history entries to reflect ingredient change
             recipe.updateHistoryAfterIngredientChange(
                 `Ingredient removed: ${ingredientName}`
             );
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to remove ingredient: ${error.message}`);
         }
@@ -725,7 +728,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -733,20 +736,20 @@ class RecipeManager {
             }
 
             const recipe = recipes[recipeIndex];
-            
+
             // Update ingredient weight (this validates)
             recipe.updateIngredientWeight(ingredientName, newWeight);
-            
+
             // Update history entries to reflect ingredient change
             recipe.updateHistoryAfterIngredientChange(
                 `Ingredient weight updated: ${ingredientName} to ${newWeight}g`
             );
-            
+
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             throw new Error(`Failed to update ingredient weight: ${error.message}`);
         }
@@ -781,7 +784,7 @@ class RecipeManager {
 
             // Load existing recipes
             const recipes = this._loadRecipes();
-            
+
             // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
             if (recipeIndex === -1) {
@@ -800,9 +803,9 @@ class RecipeManager {
 
             // Save to storage
             this._saveRecipes(recipes);
-            
+
             return recipe;
-            
+
         } catch (error) {
             console.error('Failed to update recipe ingredients:', error);
             throw new Error(`Failed to update recipe ingredients: ${error.message}`);
@@ -822,53 +825,28 @@ class RecipeManager {
                 throw new Error('Recipe ID must be a non-empty string');
             }
 
-            if (!Array.isArray(copiedIngredientNames) || copiedIngredientNames.length === 0) {
-                throw new Error('Copied ingredient names must be a non-empty array');
-            }
-
-            // Load existing recipes
             const recipes = this._loadRecipes();
-            
-            // Find recipe
             const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+
             if (recipeIndex === -1) {
                 throw new Error(`Recipe with ID "${recipeId}" not found`);
             }
 
             const recipe = recipes[recipeIndex];
-            const copiedNames = new Set(copiedIngredientNames.map(n => n.toLowerCase()));
 
-            // Calculate total consumed for each copied ingredient from history
-            for (const ingredient of recipe.ingredients) {
-                if (copiedNames.has(ingredient.name.toLowerCase())) {
-                    let totalConsumed = 0;
-                    
-                    if (recipe.consumptionHistory && recipe.consumptionHistory.length > 0) {
-                        for (const entry of recipe.consumptionHistory) {
-                            if (entry.ingredientBreakdown) {
-                                const breakdown = entry.ingredientBreakdown.find(b => 
-                                    b.name.toLowerCase() === ingredient.name.toLowerCase()
-                                );
-                                if (breakdown) {
-                                    totalConsumed += breakdown.consumedWeight || 0;
-                                }
-                            }
-                        }
-                    }
+            // Mark as fully consumed since leftovers were moved to a new recipe
+            // We DON'T modify ingredient weights here because:
+            // 1. Ingredients must have weights > 0
+            // 2. The history already tracks what was consumed
+            // 3. consumeAll() correctly marks it as finished
+            recipe.consumeAll();
 
-                    // Update ingredient weights
-                    ingredient.weight = Math.round(totalConsumed);
-                }
-            }
-
-            // Save to storage
             this._saveRecipes(recipes);
-            
             return recipe;
-            
+
         } catch (error) {
-            console.error('Failed to reset recipe weights:', error);
-            throw new Error(`Failed to reset recipe weights: ${error.message}`);
+            console.error('Failed to reset recipe state:', error);
+            throw new Error(`Failed to reset recipe state: ${error.message}`);
         }
     }
 }

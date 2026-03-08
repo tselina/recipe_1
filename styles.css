@@ -1282,6 +1282,7 @@ body.modal-open {
     max-height: 400px;
     overflow-y: auto;
     margin-bottom: 1rem;
+    padding-bottom: 2rem;
 }
 
 .history-entry {
@@ -1517,5 +1518,264 @@ body.modal-open {
 @media (max-width: 768px) {
     .edit-history-modal-content {
         width: 95vw;
+    }
+}
+
+/* Edit Recipe Modal */
+.edit-recipe-modal-content {
+    width: 90vw;
+    max-width: 600px;
+    max-height: 85vh;
+}
+
+.edit-recipe-modal-content .modal-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.edit-recipe-modal-content .form-group {
+    margin-bottom: 1rem;
+}
+
+.edit-recipe-modal-content .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.edit-recipe-modal-content .form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.edit-recipe-modal-content .form-group input:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.edit-ingredients-section {
+    margin: 1.5rem 0;
+}
+
+.edit-ingredients-section h4 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.edit-ingredients-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.edit-ingredient-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.edit-ingredient-name {
+    flex: 2;
+}
+
+.edit-ingredient-weight {
+    flex: 1;
+    min-width: 100px;
+}
+
+.edit-ingredient-row .remove-ingredient-btn {
+    flex: 0;
+    white-space: nowrap;
+}
+
+.edit-recipe-summary {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+    margin-top: 1rem;
+}
+
+.edit-recipe-summary p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+}
+
+.edit-recipe-summary .weight-change {
+    font-weight: 500;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+}
+
+.edit-recipe-summary .weight-change.positive {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.edit-recipe-summary .weight-change.negative {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+@media (max-width: 768px) {
+    .edit-recipe-modal-content {
+        width: 95vw;
+        max-height: 90vh;
+    }
+    
+    .edit-ingredient-row {
+        flex-wrap: wrap;
+    }
+    
+    .edit-ingredient-name {
+        flex: 1 1 100%;
+    }
+    
+    .edit-ingredient-weight {
+        flex: 1 1 calc(50% - 2rem);
+    }
+    
+    .edit-ingredient-row .remove-ingredient-btn {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .edit-ingredient-weight {
+        flex: 1 1 100%;
+    }
+}
+
+/* Continuation Modal */
+.continuation-modal-content {
+    width: 90vw;
+    max-width: 600px;
+    max-height: 85vh;
+}
+
+.continuation-modal-content .modal-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.continuation-modal-content .form-group {
+    margin-bottom: 1rem;
+}
+
+.continuation-modal-content .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.continuation-modal-content .form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.continuation-modal-content .form-group input:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.continuation-modal-content .form-group input.invalid {
+    border-color: #f44336;
+}
+
+.continuation-modal-content .error-message {
+    color: #f44336;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.continuation-ingredients-section {
+    margin: 1.5rem 0;
+}
+
+.continuation-ingredients-section h4 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.continuation-ingredients-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.continuation-ingredient-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.continuation-ingredient-name {
+    flex: 2;
+}
+
+.continuation-ingredient-barcode {
+    flex: 1;
+    min-width: 120px;
+}
+
+.continuation-ingredient-weight {
+    flex: 1;
+    min-width: 100px;
+}
+
+.continuation-ingredient-row .remove-ingredient-btn {
+    flex: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .continuation-modal-content {
+        width: 95vw;
+        max-height: 90vh;
+    }
+    
+    .continuation-ingredient-row {
+        flex-wrap: wrap;
+    }
+    
+    .continuation-ingredient-name {
+        flex: 1 1 100%;
+    }
+    
+    .continuation-ingredient-barcode {
+        flex: 1 1 40%;
+    }
+    
+    .continuation-ingredient-weight {
+        flex: 1 1 40%;
+    }
+    
+    .continuation-ingredient-row .remove-ingredient-btn {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .continuation-ingredient-barcode {
+        flex: 1 1 100%;
+    }
+    
+    .continuation-ingredient-weight {
+        flex: 1 1 100%;
     }
 }

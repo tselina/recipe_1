@@ -751,6 +751,126 @@ class RecipeManager {
             throw new Error(`Failed to update ingredient weight: ${error.message}`);
         }
     }
+
+    /**
+     * Update all ingredients of a recipe at once
+     * @param {string} recipeId - ID of recipe
+     * @param {Array} ingredients - Array of ingredient objects {name, weight}
+     * @returns {Recipe} Updated recipe
+     * @throws {Error} If recipe not found or validation fails
+     */
+    updateRecipeIngredients(recipeId, ingredients) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!Array.isArray(ingredients) || ingredients.length === 0) {
+                throw new Error('Ingredients must be a non-empty array');
+            }
+
+            // Validate all ingredients
+            ingredients.forEach((ing, index) => {
+                if (!ing.name || typeof ing.name !== 'string') {
+                    throw new Error(`Ingredient at index ${index} must have a valid name`);
+                }
+                if (typeof ing.weight !== 'number' || ing.weight <= 0 || !isFinite(ing.weight)) {
+                    throw new Error(`Ingredient "${ing.name}" must have a valid positive weight`);
+                }
+            });
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            const oldTotalWeight = recipe.totalWeight;
+
+            // Replace ingredients directly
+            recipe.ingredients = ingredients.map(ing => new Ingredient(ing.name, ing.weight));
+            recipe._calculateTotalWeight();
+
+            // Recalculate history entries to reflect ingredient change
+            recipe.updateHistoryAfterIngredientChange('Recipe ingredients updated');
+
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            console.error('Failed to update recipe ingredients:', error);
+            throw new Error(`Failed to update recipe ingredients: ${error.message}`);
+        }
+    }
+
+    /**
+     * Reset recipe weights after creating continuation recipe
+     * Sets original weights to total consumed and remaining to 0 for copied ingredients
+     * @param {string} recipeId - ID of original recipe
+     * @param {Array} copiedIngredientNames - Names of ingredients copied to new recipe
+     * @returns {Recipe} Updated recipe
+     */
+    resetRecipeAfterContinuation(recipeId, copiedIngredientNames) {
+        try {
+            if (!recipeId || typeof recipeId !== 'string') {
+                throw new Error('Recipe ID must be a non-empty string');
+            }
+
+            if (!Array.isArray(copiedIngredientNames) || copiedIngredientNames.length === 0) {
+                throw new Error('Copied ingredient names must be a non-empty array');
+            }
+
+            // Load existing recipes
+            const recipes = this._loadRecipes();
+            
+            // Find recipe
+            const recipeIndex = recipes.findIndex(r => r.id === recipeId);
+            if (recipeIndex === -1) {
+                throw new Error(`Recipe with ID "${recipeId}" not found`);
+            }
+
+            const recipe = recipes[recipeIndex];
+            const copiedNames = new Set(copiedIngredientNames.map(n => n.toLowerCase()));
+
+            // Calculate total consumed for each copied ingredient from history
+            for (const ingredient of recipe.ingredients) {
+                if (copiedNames.has(ingredient.name.toLowerCase())) {
+                    let totalConsumed = 0;
+                    
+                    if (recipe.consumptionHistory && recipe.consumptionHistory.length > 0) {
+                        for (const entry of recipe.consumptionHistory) {
+                            if (entry.ingredientBreakdown) {
+                                const breakdown = entry.ingredientBreakdown.find(b => 
+                                    b.name.toLowerCase() === ingredient.name.toLowerCase()
+                                );
+                                if (breakdown) {
+                                    totalConsumed += breakdown.consumedWeight || 0;
+                                }
+                            }
+                        }
+                    }
+
+                    // Update ingredient weights
+                    ingredient.weight = Math.round(totalConsumed);
+                }
+            }
+
+            // Save to storage
+            this._saveRecipes(recipes);
+            
+            return recipe;
+            
+        } catch (error) {
+            console.error('Failed to reset recipe weights:', error);
+            throw new Error(`Failed to reset recipe weights: ${error.message}`);
+        }
+    }
 }
 
 // Export for use in other modules

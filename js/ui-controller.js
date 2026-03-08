@@ -385,6 +385,7 @@ class UIController {
         
         const consumptionPercentage = recipe.getConsumptionPercentage();
         const isFullyConsumed = recipe.isFullyConsumed();
+        const hasRemainingIngredients = recipe.ingredients.some(ing => ing.weight > 0);
         
         // Format dates
         const createdDate = new Date(recipe.createdAt).toLocaleDateString();
@@ -424,6 +425,12 @@ class UIController {
                 <button class="btn btn-secondary btn-small calculate-btn" data-recipe-id="${recipe.id}" ${isFullyConsumed ? 'disabled' : ''}>
                     ${isFullyConsumed ? 'Completed' : 'Calculate Portions'}
                 </button>
+                <button class="btn btn-primary btn-small edit-recipe-btn" data-recipe-id="${recipe.id}">
+                    Edit Recipe
+                </button>
+                <button class="btn btn-primary btn-small new-from-this-btn" data-recipe-id="${recipe.id}" ${!hasRemainingIngredients ? 'disabled title="No remaining ingredients"' : ''}>
+                    New from this
+                </button>
                 <button class="btn btn-primary btn-small view-history-btn" data-recipe-id="${recipe.id}">
                     View History
                 </button>
@@ -441,6 +448,8 @@ class UIController {
         
         // Add event listeners
         const calculateBtn = card.querySelector('.calculate-btn');
+        const editRecipeBtn = card.querySelector('.edit-recipe-btn');
+        const newFromThisBtn = card.querySelector('.new-from-this-btn');
         const viewHistoryBtn = card.querySelector('.view-history-btn');
         const copyBtn = card.querySelector('.copy-btn');
         const resetBtn = card.querySelector('.reset-btn');
@@ -449,6 +458,16 @@ class UIController {
         if (!isFullyConsumed) {
             calculateBtn.addEventListener('click', () => {
                 this.selectRecipeForCalculation(recipe.id);
+            });
+        }
+
+        editRecipeBtn.addEventListener('click', () => {
+            this.showEditRecipeModal(recipe.id);
+        });
+
+        if (hasRemainingIngredients) {
+            newFromThisBtn.addEventListener('click', () => {
+                this.showContinuationModal(recipe.id);
             });
         }
 
@@ -859,8 +878,8 @@ class UIController {
                     <input type="number" 
                            class="ingredient-weight" 
                            placeholder="Weight (g)" 
-                           min="0.1" 
-                           step="0.1" 
+                           min="1" 
+                           step="1" 
                            data-index="${ingredientIndex}"
                            required>
                 </div>
@@ -2078,35 +2097,6 @@ class UIController {
             return;
         }
 
-        // Calculate statistics
-        const stats = this.calculateHistoryStatistics(recipe, history);
-
-        // Render statistics
-        const statsHTML = `
-            <div class="history-stats">
-                <div class="stat-item">
-                    <div class="stat-label">Total Consumed</div>
-                    <div class="stat-value">${stats.totalConsumed}g</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Consumption Count</div>
-                    <div class="stat-value">${stats.consumptionCount}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Average Portion</div>
-                    <div class="stat-value">${stats.averagePortion}g</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">First Consumed</div>
-                    <div class="stat-value" style="font-size: 0.9rem;">${stats.firstConsumed}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Last Consumed</div>
-                    <div class="stat-value" style="font-size: 0.9rem;">${stats.lastConsumed}</div>
-                </div>
-            </div>
-        `;
-
         // Render history entries (chronological order - most recent first)
         const entriesHTML = history
             .slice()
@@ -2115,7 +2105,6 @@ class UIController {
             .join('');
 
         bodyEl.innerHTML = `
-            ${statsHTML}
             <div class="history-list">
                 ${entriesHTML}
             </div>
@@ -2296,7 +2285,7 @@ class UIController {
                 <div class="modal-body" id="edit-history-modal-body">
                     <div class="form-group">
                         <label for="edit-history-weight">Consumed Weight (g)</label>
-                        <input type="number" id="edit-history-weight" class="form-control" min="0.01" step="0.1" required>
+                        <input type="number" id="edit-history-weight" class="form-control" min="1" step="1" required>
                         <small class="form-hint">Enter the new consumed weight</small>
                     </div>
                     <div class="form-group">
@@ -2505,6 +2494,650 @@ class UIController {
         } catch (error) {
             console.error('Failed to delete history entry:', error);
             this.showErrorMessage(error.message || 'Failed to delete history entry');
+        }
+    }
+
+    /**
+     * Show edit recipe modal
+     * @param {string} recipeId - Recipe ID to edit
+     */
+    showEditRecipeModal(recipeId) {
+        const recipe = this.recipeManager.getRecipeById(recipeId);
+        if (!recipe) {
+            this.showErrorMessage('Recipe not found');
+            return;
+        }
+
+        let modal = document.getElementById('edit-recipe-modal');
+        if (!modal) {
+            modal = this.createEditRecipeModal();
+            document.body.appendChild(modal);
+        }
+
+        this.renderEditRecipeModal(modal, recipe);
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    }
+
+    /**
+     * Create edit recipe modal
+     * @returns {HTMLElement} Modal element
+     */
+    createEditRecipeModal() {
+        const modal = document.createElement('div');
+        modal.id = 'edit-recipe-modal';
+        modal.className = 'modal hidden';
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" id="edit-recipe-modal-overlay"></div>
+            <div class="modal-content edit-recipe-modal-content">
+                <div class="modal-header">
+                    <h3 id="edit-recipe-modal-title">Edit Recipe</h3>
+                    <button type="button" class="modal-close" id="close-edit-recipe-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="edit-recipe-modal-body">
+                    <!-- Content will be dynamically inserted -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-recipe-btn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-edit-recipe-btn">Save Changes</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const closeBtn = modal.querySelector('#close-edit-recipe-modal');
+        const cancelBtn = modal.querySelector('#cancel-edit-recipe-btn');
+        const saveBtn = modal.querySelector('#save-edit-recipe-btn');
+        const overlay = modal.querySelector('#edit-recipe-modal-overlay');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        saveBtn.addEventListener('click', () => this.handleSaveRecipeEdit(modal));
+
+        // Prevent modal from closing when clicking inside content
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        return modal;
+    }
+
+    /**
+     * Render edit recipe modal content
+     * @param {HTMLElement} modal - Modal element
+     * @param {Recipe} recipe - Recipe to edit
+     */
+    renderEditRecipeModal(modal, recipe) {
+        const modalBody = modal.querySelector('#edit-recipe-modal-body');
+        const recipeName = this.storageManager.escapeHtml(recipe.name);
+        
+        let ingredientsHtml = '';
+        recipe.ingredients.forEach((ingredient, index) => {
+            const escapedName = this.storageManager.escapeHtml(ingredient.name);
+            ingredientsHtml += `
+                <div class="edit-ingredient-row" data-index="${index}">
+                    <input type="text" class="edit-ingredient-name" value="${escapedName}" placeholder="Ingredient name" data-index="${index}">
+                    <input type="number" class="edit-ingredient-weight" value="${ingredient.weight}" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
+                    <button type="button" class="btn btn-danger btn-sm remove-ingredient-btn" data-index="${index}">Remove</button>
+                </div>
+            `;
+        });
+
+        modalBody.innerHTML = `
+            <form id="edit-recipe-form" class="recipe-form">
+                <div class="form-group">
+                    <label for="edit-recipe-name">Recipe Name</label>
+                    <input type="text" id="edit-recipe-name" name="editRecipeName" value="${recipeName}" required>
+                    <div class="error-message" id="edit-recipe-name-error"></div>
+                </div>
+                
+                <div class="edit-ingredients-section">
+                    <h4>Ingredients</h4>
+                    <div id="edit-ingredients-list" class="edit-ingredients-list">
+                        ${ingredientsHtml}
+                    </div>
+                    <button type="button" id="add-edit-ingredient" class="btn btn-secondary">Add Ingredient</button>
+                </div>
+                
+                <div class="edit-recipe-summary">
+                    <p><strong>Current Total Weight:</strong> <span id="edit-total-weight">${recipe.totalWeight}</span>g</p>
+                    <p><strong>New Total Weight:</strong> <span id="edit-new-total-weight">${recipe.totalWeight}</span>g</p>
+                    <p class="weight-change ${recipe.totalWeight > 0 ? '' : 'hidden'}">
+                        <strong>Weight Change:</strong> <span id="edit-weight-change">0</span>g
+                    </p>
+                </div>
+            </form>
+        `;
+
+        // Store recipe ID for save operation
+        modal.dataset.recipeId = recipe.id;
+
+        // Add event listeners
+        this.setupEditIngredientListeners(modal, recipe);
+    }
+
+    /**
+     * Setup listeners for edit ingredient functionality
+     * @param {HTMLElement} modal - Modal element
+     * @param {Recipe} recipe - Original recipe
+     */
+    setupEditIngredientListeners(modal, recipe) {
+        const addBtn = modal.querySelector('#add-edit-ingredient');
+        const nameInputs = modal.querySelectorAll('.edit-ingredient-name');
+        const weightInputs = modal.querySelectorAll('.edit-ingredient-weight');
+        const removeBtns = modal.querySelectorAll('.remove-ingredient-btn');
+
+        addBtn.addEventListener('click', () => this.addEditIngredientRow(modal));
+
+        nameInputs.forEach(input => {
+            input.addEventListener('input', () => this.updateEditWeightPreview(modal));
+        });
+
+        weightInputs.forEach(input => {
+            input.addEventListener('input', () => this.updateEditWeightPreview(modal));
+        });
+
+        removeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.removeEditIngredientRow(modal, index);
+            });
+        });
+    }
+
+    /**
+     * Add a new ingredient row in edit modal
+     * @param {HTMLElement} modal - Modal element
+     */
+    addEditIngredientRow(modal) {
+        const list = modal.querySelector('#edit-ingredients-list');
+        const index = list.children.length;
+        
+        const row = document.createElement('div');
+        row.className = 'edit-ingredient-row';
+        row.dataset.index = index;
+        row.innerHTML = `
+            <input type="text" class="edit-ingredient-name" value="" placeholder="Ingredient name" data-index="${index}">
+            <input type="number" class="edit-ingredient-weight" value="" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
+            <button type="button" class="btn btn-danger btn-sm remove-ingredient-btn" data-index="${index}">Remove</button>
+        `;
+
+        list.appendChild(row);
+
+        // Add event listeners
+        const nameInput = row.querySelector('.edit-ingredient-name');
+        const weightInput = row.querySelector('.edit-ingredient-weight');
+        const removeBtn = row.querySelector('.remove-ingredient-btn');
+
+        nameInput.addEventListener('input', () => this.updateEditWeightPreview(modal));
+        weightInput.addEventListener('input', () => this.updateEditWeightPreview(modal));
+        removeBtn.addEventListener('click', () => {
+            this.removeEditIngredientRow(modal, index);
+        });
+
+        this.updateEditWeightPreview(modal);
+    }
+
+    /**
+     * Remove an ingredient row from edit modal
+     * @param {HTMLElement} modal - Modal element
+     * @param {number} index - Index of row to remove
+     */
+    removeEditIngredientRow(modal, index) {
+        const list = modal.querySelector('#edit-ingredients-list');
+        const rows = list.querySelectorAll('.edit-ingredient-row');
+        
+        rows.forEach((row, i) => {
+            if (parseInt(row.dataset.index) === index) {
+                row.remove();
+            }
+        });
+
+        // Re-index remaining rows
+        const remainingRows = list.querySelectorAll('.edit-ingredient-row');
+        remainingRows.forEach((row, i) => {
+            row.dataset.index = i;
+            row.querySelector('.edit-ingredient-name').dataset.index = i;
+            row.querySelector('.edit-ingredient-weight').dataset.index = i;
+            row.querySelector('.remove-ingredient-btn').dataset.index = i;
+        });
+
+        this.updateEditWeightPreview(modal);
+    }
+
+    /**
+     * Update weight preview in edit modal
+     * @param {HTMLElement} modal - Modal element
+     */
+    updateEditWeightPreview(modal) {
+        const weightInputs = modal.querySelectorAll('.edit-ingredient-weight');
+        let newTotal = 0;
+        
+        weightInputs.forEach(input => {
+            const weight = parseFloat(input.value) || 0;
+            newTotal += weight;
+        });
+
+        const originalRecipe = this.recipeManager.getRecipeById(modal.dataset.recipeId);
+        const originalTotal = originalRecipe ? originalRecipe.totalWeight : 0;
+        const change = newTotal - originalTotal;
+
+        modal.querySelector('#edit-new-total-weight').textContent = newTotal.toFixed(1);
+        
+        const changeElement = modal.querySelector('#edit-weight-change');
+        const changeSpan = modal.querySelector('#edit-weight-change');
+        
+        if (change > 0) {
+            changeSpan.textContent = `+${change.toFixed(1)}`;
+            changeElement.className = 'weight-change positive';
+        } else if (change < 0) {
+            changeSpan.textContent = change.toFixed(1);
+            changeElement.className = 'weight-change negative';
+        } else {
+            changeSpan.textContent = '0';
+            changeElement.className = 'weight-change';
+        }
+    }
+
+    /**
+     * Handle save recipe edit
+     * @param {HTMLElement} modal - Modal element
+     */
+    handleSaveRecipeEdit(modal) {
+        const recipeId = modal.dataset.recipeId;
+        const recipe = this.recipeManager.getRecipeById(recipeId);
+        
+        if (!recipe) {
+            this.showErrorMessage('Recipe not found');
+            return;
+        }
+
+        // Get updated name
+        const nameInput = modal.querySelector('#edit-recipe-name');
+        const newName = nameInput.value.trim();
+        
+        if (!newName) {
+            this.showErrorMessage('Recipe name is required');
+            return;
+        }
+
+        // Get updated ingredients
+        const nameInputs = modal.querySelectorAll('.edit-ingredient-name');
+        const weightInputs = modal.querySelectorAll('.edit-ingredient-weight');
+        const ingredients = [];
+
+        nameInputs.forEach((input, i) => {
+            const name = input.value.trim();
+            const weight = parseFloat(weightInputs[i].value) || 0;
+            
+            if (name && weight > 0) {
+                ingredients.push({ name, weight });
+            }
+        });
+
+        if (ingredients.length === 0) {
+            this.showErrorMessage('At least one ingredient with valid weight is required');
+            return;
+        }
+
+        try {
+            // Update the recipe
+            this.recipeManager.updateRecipeIngredients(recipeId, ingredients);
+            
+            // Update name if changed
+            if (newName !== recipe.name) {
+                this.recipeManager.updateRecipe(recipeId, { name: newName });
+            }
+
+            this.showSuccessMessage('Recipe updated successfully');
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+            this.updateRecipeList();
+        } catch (error) {
+            this.showErrorMessage('Failed to update recipe: ' + error.message);
+        }
+    }
+
+    /**
+     * Show continuation modal for creating new recipe from remaining ingredients
+     * @param {string} recipeId - ID of source recipe
+     */
+    showContinuationModal(recipeId) {
+        const recipe = this.recipeManager.getRecipeById(recipeId);
+        if (!recipe) {
+            this.showErrorMessage('Recipe not found');
+            return;
+        }
+
+        // Check for remaining ingredients
+        const remainingIngredients = recipe.ingredients.filter(ing => ing.weight > 0);
+        if (remainingIngredients.length === 0) {
+            this.showErrorMessage('No remaining ingredients to continue');
+            return;
+        }
+
+        let modal = document.getElementById('continuation-modal');
+        if (!modal) {
+            modal = this.createContinuationModal();
+            document.body.appendChild(modal);
+        }
+
+        this.renderContinuationModal(modal, recipe);
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    }
+
+    /**
+     * Create continuation modal
+     * @returns {HTMLElement} Modal element
+     */
+    createContinuationModal() {
+        const modal = document.createElement('div');
+        modal.id = 'continuation-modal';
+        modal.className = 'modal hidden';
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" id="continuation-modal-overlay"></div>
+            <div class="modal-content continuation-modal-content">
+                <div class="modal-header">
+                    <h3 id="continuation-modal-title">Create New Recipe from Remaining Ingredients</h3>
+                    <button type="button" class="modal-close" id="close-continuation-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="continuation-modal-body">
+                    <!-- Content will be dynamically inserted -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-continuation-btn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="create-continuation-btn" disabled>Create Recipe</button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        const closeBtn = modal.querySelector('#close-continuation-modal');
+        const cancelBtn = modal.querySelector('#cancel-continuation-btn');
+        const createBtn = modal.querySelector('#create-continuation-btn');
+        const overlay = modal.querySelector('#continuation-modal-overlay');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        createBtn.addEventListener('click', () => this.handleContinuationSubmit(modal));
+
+        // Prevent modal from closing when clicking inside content
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        return modal;
+    }
+
+    /**
+     * Render continuation modal content
+     * @param {HTMLElement} modal - Modal element
+     * @param {Recipe} recipe - Source recipe
+     */
+    renderContinuationModal(modal, recipe) {
+        const modalBody = modal.querySelector('#continuation-modal-body');
+        const recipeName = this.storageManager.escapeHtml(recipe.name);
+        const defaultName = `${recipeName} - new`;
+        
+        // Get remaining ingredients
+        const remainingIngredients = recipe.ingredients.filter(ing => ing.weight > 0);
+        
+        let ingredientsHtml = '';
+        remainingIngredients.forEach((ingredient, index) => {
+            const escapedName = this.storageManager.escapeHtml(ingredient.name);
+            const barcode = ingredient.barcode ? this.storageManager.escapeHtml(ingredient.barcode) : '';
+            ingredientsHtml += `
+                <div class="continuation-ingredient-row" data-index="${index}">
+                    <input type="text" class="continuation-ingredient-name" value="${escapedName}" placeholder="Ingredient name" data-index="${index}">
+                    <input type="text" class="continuation-ingredient-barcode" value="${barcode}" placeholder="Barcode (optional)" data-index="${index}">
+                    <input type="number" class="continuation-ingredient-weight" value="${ingredient.weight}" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
+                    <button type="button" class="btn btn-danger btn-sm remove-ingredient-btn" data-index="${index}">Remove</button>
+                </div>
+            `;
+        });
+
+        modalBody.innerHTML = `
+            <form id="continuation-form" class="recipe-form">
+                <div class="form-group">
+                    <label for="continuation-name">Recipe Name</label>
+                    <input type="text" id="continuation-name" name="continuationName" value="${defaultName}" maxlength="200" required>
+                    <div class="error-message" id="continuation-name-error"></div>
+                </div>
+                
+                <div class="continuation-ingredients-section">
+                    <h4>Remaining Ingredients</h4>
+                    <div id="continuation-ingredients-list" class="continuation-ingredients-list">
+                        ${ingredientsHtml}
+                    </div>
+                    <button type="button" id="add-continuation-ingredient" class="btn btn-secondary">Add Ingredient</button>
+                </div>
+            </form>
+        `;
+
+        // Store recipe ID for submit operation
+        modal.dataset.recipeId = recipe.id;
+
+        // Add event listeners
+        this.setupContinuationModalListeners(modal);
+    }
+
+    /**
+     * Setup listeners for continuation modal
+     * @param {HTMLElement} modal - Modal element
+     */
+    setupContinuationModalListeners(modal) {
+        const addBtn = modal.querySelector('#add-continuation-ingredient');
+        const nameInput = modal.querySelector('#continuation-name');
+        const createBtn = modal.querySelector('#create-continuation-btn');
+        const nameInputs = modal.querySelectorAll('.continuation-ingredient-name');
+        const weightInputs = modal.querySelectorAll('.continuation-ingredient-weight');
+        const removeBtns = modal.querySelectorAll('.remove-ingredient-btn');
+
+        addBtn.addEventListener('click', () => this.addContinuationIngredientRow(modal));
+
+        nameInput.addEventListener('input', () => {
+            this.validateContinuationForm(modal);
+        });
+
+        nameInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                this.validateContinuationForm(modal);
+            });
+        });
+
+        weightInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                this.validateContinuationForm(modal);
+            });
+        });
+
+        removeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.removeContinuationIngredientRow(modal, index);
+            });
+        });
+
+        // Initial validation
+        this.validateContinuationForm(modal);
+    }
+
+    /**
+     * Add a new ingredient row in continuation modal
+     * @param {HTMLElement} modal - Modal element
+     */
+    addContinuationIngredientRow(modal) {
+        const list = modal.querySelector('#continuation-ingredients-list');
+        const index = list.children.length;
+        
+        const row = document.createElement('div');
+        row.className = 'continuation-ingredient-row';
+        row.dataset.index = index;
+        row.innerHTML = `
+            <input type="text" class="continuation-ingredient-name" value="" placeholder="Ingredient name" data-index="${index}">
+            <input type="text" class="continuation-ingredient-barcode" value="" placeholder="Barcode (optional)" data-index="${index}">
+            <input type="number" class="continuation-ingredient-weight" value="" min="1" step="1" placeholder="Weight (g)" data-index="${index}">
+            <button type="button" class="btn btn-danger btn-sm remove-ingredient-btn" data-index="${index}">Remove</button>
+        `;
+
+        list.appendChild(row);
+
+        // Add event listeners
+        const nameInput = row.querySelector('.continuation-ingredient-name');
+        const weightInput = row.querySelector('.continuation-ingredient-weight');
+        const removeBtn = row.querySelector('.remove-ingredient-btn');
+
+        nameInput.addEventListener('input', () => this.validateContinuationForm(modal));
+        weightInput.addEventListener('input', () => this.validateContinuationForm(modal));
+        removeBtn.addEventListener('click', () => {
+            this.removeContinuationIngredientRow(modal, index);
+        });
+
+        this.validateContinuationForm(modal);
+    }
+
+    /**
+     * Remove an ingredient row from continuation modal
+     * @param {HTMLElement} modal - Modal element
+     * @param {number} index - Index of row to remove
+     */
+    removeContinuationIngredientRow(modal, index) {
+        const list = modal.querySelector('#continuation-ingredients-list');
+        const rows = list.querySelectorAll('.continuation-ingredient-row');
+        
+        rows.forEach((row, i) => {
+            if (parseInt(row.dataset.index) === index) {
+                row.remove();
+            }
+        });
+
+        // Re-index remaining rows
+        const remainingRows = list.querySelectorAll('.continuation-ingredient-row');
+        remainingRows.forEach((row, i) => {
+            row.dataset.index = i;
+            row.querySelector('.continuation-ingredient-name').dataset.index = i;
+            row.querySelector('.continuation-ingredient-barcode').dataset.index = i;
+            row.querySelector('.continuation-ingredient-weight').dataset.index = i;
+            row.querySelector('.remove-ingredient-btn').dataset.index = i;
+        });
+
+        this.validateContinuationForm(modal);
+    }
+
+    /**
+     * Validate continuation form
+     * @param {HTMLElement} modal - Modal element
+     * @returns {boolean} Whether form is valid
+     */
+    validateContinuationForm(modal) {
+        const nameInput = modal.querySelector('#continuation-name');
+        const nameError = modal.querySelector('#continuation-name-error');
+        const createBtn = modal.querySelector('#create-continuation-btn');
+        const nameInputs = modal.querySelectorAll('.continuation-ingredient-name');
+        const weightInputs = modal.querySelectorAll('.continuation-ingredient-weight');
+        
+        // Validate name
+        const name = nameInput.value.trim();
+        if (!name) {
+            nameError.textContent = 'Name is required';
+            nameInput.classList.add('invalid');
+        } else {
+            nameError.textContent = '';
+            nameInput.classList.remove('invalid');
+        }
+        
+        // Validate at least one ingredient with name and valid weight
+        let validIngredients = 0;
+        nameInputs.forEach((input, i) => {
+            const name = input.value.trim();
+            const weight = parseFloat(weightInputs[i].value) || 0;
+            if (name && weight > 0) {
+                validIngredients++;
+            }
+        });
+        
+        const isValid = name && validIngredients > 0;
+        createBtn.disabled = !isValid;
+        
+        return isValid;
+    }
+
+    /**
+     * Handle continuation form submission
+     * @param {HTMLElement} modal - Modal element
+     */
+    handleContinuationSubmit(modal) {
+        const recipeId = modal.dataset.recipeId;
+        const recipe = this.recipeManager.getRecipeById(recipeId);
+        
+        if (!recipe) {
+            this.showErrorMessage('Recipe not found');
+            return;
+        }
+
+        // Get form data
+        const nameInput = modal.querySelector('#continuation-name');
+        const newName = nameInput.value.trim();
+        
+        if (!newName) {
+            this.showErrorMessage('Recipe name is required');
+            return;
+        }
+
+        // Get ingredients
+        const nameInputs = modal.querySelectorAll('.continuation-ingredient-name');
+        const barcodeInputs = modal.querySelectorAll('.continuation-ingredient-barcode');
+        const weightInputs = modal.querySelectorAll('.continuation-ingredient-weight');
+        const ingredients = [];
+
+        nameInputs.forEach((input, i) => {
+            const name = input.value.trim();
+            const weight = parseFloat(weightInputs[i].value) || 0;
+            const barcode = barcodeInputs[i].value.trim();
+            
+            if (name && weight > 0) {
+                ingredients.push({ name, weight, barcode: barcode || null });
+            }
+        });
+
+        if (ingredients.length === 0) {
+            this.showErrorMessage('At least one ingredient with valid weight is required');
+            return;
+        }
+
+        try {
+            // Create new recipe
+            const newRecipe = this.recipeManager.createRecipe(newName, ingredients);
+            
+            // Reset original recipe weights
+            this.recipeManager.resetRecipeAfterContinuation(recipeId, ingredients.map(i => i.name));
+            
+            this.showSuccessMessage('Recipe created successfully');
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+            
+            // Navigate to new recipe
+            this.showView('recipe-create-view');
+            this.updateViewContent('recipe-create-view');
+            this.updateRecipeList();
+            
+        } catch (error) {
+            this.showErrorMessage('Failed to create recipe: ' + error.message);
         }
     }
 }
